@@ -44,7 +44,8 @@ describe('ReportsController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/budgets')
-      .send({ userId, accountId, categoryId: expenseCategoryId, amount: '20000' });
+      .set(...authHeader(accessToken))
+      .send({ accountId, categoryId: expenseCategoryId, amount: '20000' });
 
     await request(app.getHttpServer())
       .post('/transactions')

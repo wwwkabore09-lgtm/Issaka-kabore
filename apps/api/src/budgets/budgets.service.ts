@@ -21,16 +21,16 @@ export class BudgetsService {
     private readonly accountsService: AccountsService,
   ) {}
 
-  async create(dto: CreateBudgetDto): Promise<BudgetDto> {
+  async create(userId: string, dto: CreateBudgetDto): Promise<BudgetDto> {
     const amount = new Prisma.Decimal(dto.amount);
     if (amount.lte(0)) {
       throw new BadRequestException('amount doit être strictement positif');
     }
 
-    await this.accountsService.getOwnedAccountOrThrow(dto.accountId, dto.userId);
+    await this.accountsService.getOwnedAccountOrThrow(dto.accountId, userId);
 
     const category = await this.prisma.category.findUnique({ where: { id: dto.categoryId } });
-    if (!category || (category.userId !== null && category.userId !== dto.userId)) {
+    if (!category || (category.userId !== null && category.userId !== userId)) {
       throw new NotFoundException('Catégorie introuvable');
     }
     if (category.kind !== 'expense') {

@@ -54,22 +54,33 @@ describe('BudgetsController (e2e)', () => {
     await app.close();
   });
 
+  it('rejette les requêtes sans access token', async () => {
+    await request(app.getHttpServer()).get('/budgets').query({ accountId }).expect(401);
+    await request(app.getHttpServer())
+      .post('/budgets')
+      .send({ accountId, categoryId: expenseCategoryId, amount: '10000' })
+      .expect(401);
+  });
+
   it('rejette un budget sur une catégorie de revenu', async () => {
     await request(app.getHttpServer())
       .post('/budgets')
-      .send({ userId, accountId, categoryId: incomeCategoryId, amount: '10000' })
+      .set(...authHeader(accessToken))
+      .send({ accountId, categoryId: incomeCategoryId, amount: '10000' })
       .expect(400);
   });
 
   it('crée un budget puis rejette un doublon sur la même catégorie', async () => {
     await request(app.getHttpServer())
       .post('/budgets')
-      .send({ userId, accountId, categoryId: expenseCategoryId, amount: '50000' })
+      .set(...authHeader(accessToken))
+      .send({ accountId, categoryId: expenseCategoryId, amount: '50000' })
       .expect(201);
 
     await request(app.getHttpServer())
       .post('/budgets')
-      .send({ userId, accountId, categoryId: expenseCategoryId, amount: '10000' })
+      .set(...authHeader(accessToken))
+      .send({ accountId, categoryId: expenseCategoryId, amount: '10000' })
       .expect(409);
   });
 
@@ -92,7 +103,8 @@ describe('BudgetsController (e2e)', () => {
 
     const res = await request(app.getHttpServer())
       .get('/budgets')
-      .query({ userId, accountId, from, to })
+      .set(...authHeader(accessToken))
+      .query({ accountId, from, to })
       .expect(200);
 
     const progress = res.body.find((b: { categoryId: string }) => b.categoryId === expenseCategoryId);
@@ -112,24 +124,26 @@ describe('BudgetsController (e2e)', () => {
 
     const budgetRes = await request(app.getHttpServer())
       .post('/budgets')
-      .send({ userId, accountId: otherAccountId, categoryId: expenseCategoryId, amount: '20000' })
+      .set(...authHeader(accessToken))
+      .send({ accountId: otherAccountId, categoryId: expenseCategoryId, amount: '20000' })
       .expect(201);
 
     const patched = await request(app.getHttpServer())
       .patch(`/budgets/${budgetRes.body.id}`)
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .send({ amount: '25000' })
       .expect(200);
     expect(patched.body.amount).toBe('25000.00');
 
     await request(app.getHttpServer())
       .delete(`/budgets/${budgetRes.body.id}`)
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .expect(204);
 
     const listAfterDelete = await request(app.getHttpServer())
       .get('/budgets')
-      .query({ userId, accountId: otherAccountId })
+      .set(...authHeader(accessToken))
+      .query({ accountId: otherAccountId })
       .expect(200);
     expect(listAfterDelete.body).toHaveLength(0);
   });
@@ -150,7 +164,7 @@ describe('BudgetsController (e2e)', () => {
 
     await request(app.getHttpServer())
       .patch(`/budgets/${otherBudget.id}`)
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .send({ amount: '2000' })
       .expect(404);
 

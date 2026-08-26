@@ -1,10 +1,6 @@
 import { IsUUID, Matches } from 'class-validator';
 
 export class CreateBudgetDto {
-  // Temporaire : tant que le domaine auth n'existe pas (cf. domaine Accounts).
-  @IsUUID()
-  userId!: string;
-
   @IsUUID()
   accountId!: string;
 

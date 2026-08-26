@@ -8,8 +8,6 @@ export interface BudgetDto {
 }
 
 export interface CreateBudgetRequest {
-  // Temporaire : tant que le domaine auth n'existe pas (cf. domaine Accounts).
-  userId: string;
   accountId: string;
   categoryId: string;
   amount: string;

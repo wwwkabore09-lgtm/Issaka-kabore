@@ -44,7 +44,7 @@ describe('BudgetsService', () => {
       prisma.category.findUnique.mockResolvedValue({ id: categoryId, userId: null, kind: 'expense' });
       prisma.budget.create.mockResolvedValue(budget);
 
-      const result = await service.create({ userId, accountId, categoryId, amount: '50000' });
+      const result = await service.create(userId, { accountId, categoryId, amount: '50000' });
 
       expect(result.amount).toBe('50000.00');
     });
@@ -52,13 +52,13 @@ describe('BudgetsService', () => {
     it('rejette une catégorie de type income', async () => {
       prisma.category.findUnique.mockResolvedValue({ id: categoryId, userId: null, kind: 'income' });
 
-      await expect(service.create({ userId, accountId, categoryId, amount: '50000' })).rejects.toBeInstanceOf(
+      await expect(service.create(userId, { accountId, categoryId, amount: '50000' })).rejects.toBeInstanceOf(
         BadRequestException,
       );
     });
 
     it('rejette un montant à zéro', async () => {
-      await expect(service.create({ userId, accountId, categoryId, amount: '0' })).rejects.toBeInstanceOf(
+      await expect(service.create(userId, { accountId, categoryId, amount: '0' })).rejects.toBeInstanceOf(
         BadRequestException,
       );
     });
@@ -72,7 +72,7 @@ describe('BudgetsService', () => {
         }),
       );
 
-      await expect(service.create({ userId, accountId, categoryId, amount: '50000' })).rejects.toBeInstanceOf(
+      await expect(service.create(userId, { accountId, categoryId, amount: '50000' })).rejects.toBeInstanceOf(
         ConflictException,
       );
     });

@@ -117,24 +117,29 @@ export function getTransactionSummary(accountId: string, accessToken: string, fr
   });
 }
 
-export function listBudgets(accountId: string, userId: string) {
-  const query = new URLSearchParams({ userId, accountId });
-  return apiFetch<BudgetProgressDto[]>(`/budgets?${query.toString()}`);
+export function listBudgets(accountId: string, accessToken: string) {
+  const query = new URLSearchParams({ accountId });
+  return apiFetch<BudgetProgressDto[]>(`/budgets?${query.toString()}`, { headers: authHeaders(accessToken) });
 }
 
-export function createBudget(payload: CreateBudgetRequest) {
-  return apiFetch<BudgetDto>('/budgets', { method: 'POST', body: JSON.stringify(payload) });
-}
-
-export function updateBudget(id: string, userId: string, payload: UpdateBudgetRequest) {
-  return apiFetch<BudgetDto>(`/budgets/${id}?userId=${encodeURIComponent(userId)}`, {
-    method: 'PATCH',
+export function createBudget(accessToken: string, payload: CreateBudgetRequest) {
+  return apiFetch<BudgetDto>('/budgets', {
+    method: 'POST',
     body: JSON.stringify(payload),
+    headers: authHeaders(accessToken),
   });
 }
 
-export function deleteBudget(id: string, userId: string) {
-  return apiFetch<void>(`/budgets/${id}?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' });
+export function updateBudget(id: string, accessToken: string, payload: UpdateBudgetRequest) {
+  return apiFetch<BudgetDto>(`/budgets/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+    headers: authHeaders(accessToken),
+  });
+}
+
+export function deleteBudget(id: string, accessToken: string) {
+  return apiFetch<void>(`/budgets/${id}`, { method: 'DELETE', headers: authHeaders(accessToken) });
 }
 
 export function listGoals(userId: string) {

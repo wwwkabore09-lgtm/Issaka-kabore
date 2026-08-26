@@ -116,7 +116,7 @@ export default function CompteDetailPage() {
         listCategories(userId),
         listTransactions(accountId, accessToken),
         getTransactionSummary(accountId, accessToken, startOfMonthIso(), endOfMonthIso()),
-        listBudgets(accountId, userId),
+        listBudgets(accountId, accessToken),
       ]);
       setAccount(accountRes);
       setOtherAccounts(accountsRes.filter((a) => a.id !== accountId));
@@ -133,10 +133,11 @@ export default function CompteDetailPage() {
 
   async function handleCreateBudget(event: React.FormEvent) {
     event.preventDefault();
+    if (!accessToken) return;
     setSubmittingBudget(true);
     setError(null);
     try {
-      await createBudget({ userId, accountId, categoryId: budgetCategoryId, amount: budgetAmount });
+      await createBudget(accessToken, { accountId, categoryId: budgetCategoryId, amount: budgetAmount });
       setBudgetCategoryId('');
       setBudgetAmount('');
       await refreshAll();
@@ -148,9 +149,10 @@ export default function CompteDetailPage() {
   }
 
   async function handleDeleteBudget(budgetId: string) {
+    if (!accessToken) return;
     setError(null);
     try {
-      await deleteBudget(budgetId, userId);
+      await deleteBudget(budgetId, accessToken);
       await refreshAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
