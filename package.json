@@ -1,0 +1,22 @@
+{
+  "name": "finza",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:api": "npm run start:dev --workspace=apps/api",
+    "dev:admin": "npm run dev --workspace=apps/admin",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "prisma:migrate": "npm run prisma:migrate --workspace=apps/api",
+    "prisma:generate": "npm run prisma:generate --workspace=apps/api",
+    "prisma:studio": "npm run prisma:studio --workspace=apps/api"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

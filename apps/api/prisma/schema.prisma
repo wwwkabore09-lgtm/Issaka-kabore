@@ -1,0 +1,12 @@
+// Schéma Prisma de Finza.
+// Les modèles métier sont ajoutés module par module (une unité verticale = un domaine),
+// jamais tous en une fois. Ce fichier ne contient pour l'instant que la configuration de base.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
