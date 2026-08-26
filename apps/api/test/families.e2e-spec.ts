@@ -11,6 +11,7 @@ describe('FamiliesController (e2e)', () => {
   let ownerId: string;
   let ownerToken: string;
   let memberId: string;
+  let memberToken: string;
   let outsiderId: string;
   let outsiderToken: string;
 
@@ -33,6 +34,7 @@ describe('FamiliesController (e2e)', () => {
     ownerId = owner.userId;
     ownerToken = owner.accessToken;
     memberId = member.userId;
+    memberToken = member.accessToken;
     outsiderId = outsider.userId;
     outsiderToken = outsider.accessToken;
   });
@@ -45,15 +47,24 @@ describe('FamiliesController (e2e)', () => {
     await app.close();
   });
 
-  async function getMyFamily(userId: string) {
-    const res = await request(app.getHttpServer()).get('/families').query({ userId }).expect(200);
+  it('rejette les requêtes sans access token', async () => {
+    await request(app.getHttpServer()).get('/families').expect(401);
+    await request(app.getHttpServer()).post('/families').send({ name: 'Sans token' }).expect(401);
+  });
+
+  async function getMyFamily(accessToken: string) {
+    const res = await request(app.getHttpServer())
+      .get('/families')
+      .set(...authHeader(accessToken))
+      .expect(200);
     return res.body[0] ?? null;
   }
 
   it('crée une famille, y ajoute un membre, et un second create est rejeté (409)', async () => {
     const createRes = await request(app.getHttpServer())
       .post('/families')
-      .send({ userId: ownerId, name: 'Famille Kaboré' })
+      .set(...authHeader(ownerToken))
+      .send({ name: 'Famille Kaboré' })
       .expect(201);
 
     expect(createRes.body.members).toHaveLength(1);
@@ -61,12 +72,14 @@ describe('FamiliesController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/families')
-      .send({ userId: ownerId, name: 'Autre famille' })
+      .set(...authHeader(ownerToken))
+      .send({ name: 'Autre famille' })
       .expect(409);
 
     const addRes = await request(app.getHttpServer())
       .post(`/families/${createRes.body.id}/members`)
-      .send({ requestingUserId: ownerId, memberUserId: memberId })
+      .set(...authHeader(ownerToken))
+      .send({ memberUserId: memberId })
       .expect(201);
 
     expect(addRes.body.members).toHaveLength(2);
@@ -74,16 +87,17 @@ describe('FamiliesController (e2e)', () => {
   });
 
   it("empêche un non-propriétaire d'ajouter un membre", async () => {
-    const family = await getMyFamily(ownerId);
+    const family = await getMyFamily(ownerToken);
 
     await request(app.getHttpServer())
       .post(`/families/${family.id}/members`)
-      .send({ requestingUserId: memberId, memberUserId: outsiderId })
+      .set(...authHeader(memberToken))
+      .send({ memberUserId: outsiderId })
       .expect(404);
   });
 
   it('un compte non partagé reste invisible aux autres membres de la famille (règle non négociable)', async () => {
-    const family = await getMyFamily(ownerId);
+    const family = await getMyFamily(ownerToken);
 
     // Le propriétaire crée un compte personnel, non partagé par défaut.
     const accountRes = await request(app.getHttpServer())
@@ -96,7 +110,7 @@ describe('FamiliesController (e2e)', () => {
     // Le membre ne le voit pas dans la vue partagée de la famille.
     const sharedBefore = await request(app.getHttpServer())
       .get(`/families/${family.id}/shared-accounts`)
-      .query({ userId: memberId })
+      .set(...authHeader(memberToken))
       .expect(200);
     expect(sharedBefore.body.some((a: { id: string }) => a.id === accountRes.body.id)).toBe(false);
 
@@ -110,7 +124,7 @@ describe('FamiliesController (e2e)', () => {
     // Maintenant le membre le voit, avec uniquement nom/devise/solde/propriétaire.
     const sharedAfter = await request(app.getHttpServer())
       .get(`/families/${family.id}/shared-accounts`)
-      .query({ userId: memberId })
+      .set(...authHeader(memberToken))
       .expect(200);
     const shared = sharedAfter.body.find((a: { id: string }) => a.id === accountRes.body.id);
     expect(shared).toMatchObject({
@@ -137,33 +151,36 @@ describe('FamiliesController (e2e)', () => {
   });
 
   it('empêche un externe de voir les comptes partagés de la famille (404, pas 403)', async () => {
-    const family = await getMyFamily(ownerId);
+    const family = await getMyFamily(ownerToken);
 
     await request(app.getHttpServer())
       .get(`/families/${family.id}/shared-accounts`)
-      .query({ userId: outsiderId })
+      .set(...authHeader(outsiderToken))
       .expect(404);
   });
 
   it('permet à un membre de quitter la famille, mais pas au propriétaire', async () => {
-    const family = await getMyFamily(ownerId);
+    const family = await getMyFamily(ownerToken);
 
     await request(app.getHttpServer())
       .delete(`/families/${family.id}/members/${memberId}`)
-      .query({ requestingUserId: memberId })
+      .set(...authHeader(memberToken))
       .expect(204);
 
-    const afterLeave = await getMyFamily(memberId);
+    const afterLeave = await getMyFamily(memberToken);
     expect(afterLeave).toBeNull();
 
     await request(app.getHttpServer())
       .delete(`/families/${family.id}/members/${ownerId}`)
-      .query({ requestingUserId: ownerId })
+      .set(...authHeader(ownerToken))
       .expect(400);
   });
 
   it("retourne un tableau vide pour un utilisateur sans famille", async () => {
-    const res = await request(app.getHttpServer()).get('/families').query({ userId: outsiderId }).expect(200);
+    const res = await request(app.getHttpServer())
+      .get('/families')
+      .set(...authHeader(outsiderToken))
+      .expect(200);
     expect(res.body).toEqual([]);
   });
 });

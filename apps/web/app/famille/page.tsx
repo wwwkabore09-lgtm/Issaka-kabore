@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { FamilyDto, SharedAccountDto } from '@finza/shared-types';
 import { cn } from '@finza/ui';
 import {
@@ -12,14 +13,15 @@ import {
   listSharedAccounts,
   removeFamilyMember,
 } from '@/lib/api';
-
-const USER_ID_STORAGE_KEY = 'finza_demo_user_id';
+import { getStoredAccessToken, getStoredUserId } from '@/lib/auth-session';
 
 function formatXof(value: string) {
   return `${Number(value).toLocaleString('fr-FR')} FCFA`;
 }
 
 export default function FamillePage() {
+  const router = useRouter();
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [userId, setUserId] = useState('');
   const [family, setFamily] = useState<FamilyDto | null>(null);
   const [sharedAccounts, setSharedAccounts] = useState<SharedAccountDto[]>([]);
@@ -31,25 +33,30 @@ export default function FamillePage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(USER_ID_STORAGE_KEY);
-    if (stored) setUserId(stored);
-  }, []);
+    const storedToken = getStoredAccessToken();
+    if (!storedToken) {
+      router.replace('/connexion');
+      return;
+    }
+    setAccessToken(storedToken);
+    setUserId(getStoredUserId() ?? '');
+  }, [router]);
 
   useEffect(() => {
-    if (!userId) return;
-    window.localStorage.setItem(USER_ID_STORAGE_KEY, userId);
+    if (!accessToken) return;
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [accessToken]);
 
   async function refresh() {
+    if (!accessToken) return;
     setLoading(true);
     setError(null);
     try {
-      const families = await listMyFamilies(userId);
+      const families = await listMyFamilies(accessToken);
       const mine = families[0] ?? null;
       setFamily(mine);
-      setSharedAccounts(mine ? await listSharedAccounts(mine.id, userId) : []);
+      setSharedAccounts(mine ? await listSharedAccounts(mine.id, accessToken) : []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
@@ -59,10 +66,11 @@ export default function FamillePage() {
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault();
+    if (!accessToken) return;
     setSubmitting(true);
     setError(null);
     try {
-      await createFamily({ userId, name: familyName });
+      await createFamily(accessToken, { name: familyName });
       setFamilyName('');
       await refresh();
     } catch (err) {
@@ -74,11 +82,11 @@ export default function FamillePage() {
 
   async function handleAddMember(event: React.FormEvent) {
     event.preventDefault();
-    if (!family) return;
+    if (!family || !accessToken) return;
     setSubmitting(true);
     setError(null);
     try {
-      await addFamilyMember(family.id, { requestingUserId: userId, memberUserId });
+      await addFamilyMember(family.id, accessToken, { memberUserId });
       setMemberUserId('');
       await refresh();
     } catch (err) {
@@ -89,10 +97,10 @@ export default function FamillePage() {
   }
 
   async function handleRemoveMember(targetUserId: string) {
-    if (!family) return;
+    if (!family || !accessToken) return;
     setError(null);
     try {
-      await removeFamilyMember(family.id, targetUserId, userId);
+      await removeFamilyMember(family.id, targetUserId, accessToken);
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
@@ -100,10 +108,10 @@ export default function FamillePage() {
   }
 
   async function handleDeleteFamily() {
-    if (!family) return;
+    if (!family || !accessToken) return;
     setError(null);
     try {
-      await deleteFamily(family.id, userId);
+      await deleteFamily(family.id, accessToken);
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
@@ -111,6 +119,14 @@ export default function FamillePage() {
   }
 
   const isOwner = family?.ownerId === userId;
+
+  if (!accessToken) {
+    return (
+      <main className="mx-auto max-w-2xl p-8">
+        <p className="text-sm text-muted-foreground">Redirection vers la connexion…</p>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-8 p-8">
@@ -125,26 +141,13 @@ export default function FamillePage() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor="userId" className="text-sm font-medium">
-          Identifiant utilisateur
-        </label>
-        <input
-          id="userId"
-          value={userId}
-          onChange={(event) => setUserId(event.target.value.trim())}
-          placeholder="uuid — via npm run prisma:seed --workspace=apps/api"
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-        />
-      </div>
-
       {error && (
         <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {error}
         </p>
       )}
 
-      {userId && !loading && !family && (
+      {!loading && !family && (
         <form onSubmit={handleCreate} className="flex flex-col gap-3 rounded-lg border border-border p-4">
           <h2 className="font-medium">Vous n&apos;appartenez à aucune famille</h2>
           <div className="flex gap-2">

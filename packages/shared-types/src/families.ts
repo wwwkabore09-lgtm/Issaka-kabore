@@ -18,14 +18,10 @@ export interface FamilyDto {
 }
 
 export interface CreateFamilyRequest {
-  // Temporaire : tant que le domaine auth n'existe pas (cf. domaine Accounts).
-  userId: string;
   name: string;
 }
 
 export interface AddFamilyMemberRequest {
-  // userId de l'appelant (doit être le propriétaire) ; temporaire, cf. domaine Accounts.
-  requestingUserId: string;
   // userId du membre à ajouter — pas d'invitation par email tant que l'auth n'existe pas :
   // le propriétaire doit connaître l'identifiant de la personne à ajouter.
   memberUserId: string;

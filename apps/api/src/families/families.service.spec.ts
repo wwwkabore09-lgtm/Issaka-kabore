@@ -44,7 +44,7 @@ describe('FamiliesService', () => {
     it("rejette la création si l'utilisateur appartient déjà à une famille", async () => {
       prisma.familyMember.findUnique.mockResolvedValue({ userId: ownerId, familyId: 'autre-famille' });
 
-      await expect(service.create({ userId: ownerId, name: 'Ma famille' })).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.create(ownerId, { name: 'Ma famille' })).rejects.toBeInstanceOf(ConflictException);
       expect(prisma.family.create).not.toHaveBeenCalled();
     });
 
@@ -55,7 +55,7 @@ describe('FamiliesService', () => {
         members: [familyWithMembers.members[0]],
       });
 
-      const result = await service.create({ userId: ownerId, name: 'Ma famille' });
+      const result = await service.create(ownerId, { name: 'Ma famille' });
 
       expect(result.ownerId).toBe(ownerId);
       expect(result.members).toHaveLength(1);
@@ -88,7 +88,7 @@ describe('FamiliesService', () => {
       prisma.family.findUnique.mockResolvedValue(familyWithMembers);
 
       await expect(
-        service.addMember(familyId, { requestingUserId: memberId, memberUserId: outsiderId }),
+        service.addMember(familyId, memberId, { memberUserId: outsiderId }),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(prisma.familyMember.create).not.toHaveBeenCalled();
     });
@@ -98,7 +98,7 @@ describe('FamiliesService', () => {
       prisma.familyMember.findUnique.mockResolvedValue({ userId: outsiderId, familyId: 'autre-famille' });
 
       await expect(
-        service.addMember(familyId, { requestingUserId: ownerId, memberUserId: outsiderId }),
+        service.addMember(familyId, ownerId, { memberUserId: outsiderId }),
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
@@ -107,7 +107,7 @@ describe('FamiliesService', () => {
       prisma.familyMember.findUnique.mockResolvedValue(null);
       prisma.family.findUniqueOrThrow.mockResolvedValue(familyWithMembers);
 
-      const result = await service.addMember(familyId, { requestingUserId: ownerId, memberUserId: outsiderId });
+      const result = await service.addMember(familyId, ownerId, { memberUserId: outsiderId });
 
       expect(prisma.familyMember.create).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ userId: outsiderId, role: 'member' }) }),

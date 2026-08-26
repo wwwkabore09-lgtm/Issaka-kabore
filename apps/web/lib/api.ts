@@ -269,31 +269,39 @@ export function deleteReport(id: string, accessToken: string) {
   return apiFetch<void>(`/reports/${id}`, { method: 'DELETE', headers: authHeaders(accessToken) });
 }
 
-export function listMyFamilies(userId: string) {
-  return apiFetch<FamilyDto[]>(`/families?userId=${encodeURIComponent(userId)}`);
+export function listMyFamilies(accessToken: string) {
+  return apiFetch<FamilyDto[]>('/families', { headers: authHeaders(accessToken) });
 }
 
-export function createFamily(payload: CreateFamilyRequest) {
-  return apiFetch<FamilyDto>('/families', { method: 'POST', body: JSON.stringify(payload) });
+export function createFamily(accessToken: string, payload: CreateFamilyRequest) {
+  return apiFetch<FamilyDto>('/families', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    headers: authHeaders(accessToken),
+  });
 }
 
-export function addFamilyMember(familyId: string, payload: AddFamilyMemberRequest) {
-  return apiFetch<FamilyDto>(`/families/${familyId}/members`, { method: 'POST', body: JSON.stringify(payload) });
+export function addFamilyMember(familyId: string, accessToken: string, payload: AddFamilyMemberRequest) {
+  return apiFetch<FamilyDto>(`/families/${familyId}/members`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    headers: authHeaders(accessToken),
+  });
 }
 
-export function removeFamilyMember(familyId: string, memberUserId: string, requestingUserId: string) {
-  return apiFetch<void>(
-    `/families/${familyId}/members/${memberUserId}?requestingUserId=${encodeURIComponent(requestingUserId)}`,
-    { method: 'DELETE' },
-  );
+export function removeFamilyMember(familyId: string, memberUserId: string, accessToken: string) {
+  return apiFetch<void>(`/families/${familyId}/members/${memberUserId}`, {
+    method: 'DELETE',
+    headers: authHeaders(accessToken),
+  });
 }
 
-export function deleteFamily(familyId: string, userId: string) {
-  return apiFetch<void>(`/families/${familyId}?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' });
+export function deleteFamily(familyId: string, accessToken: string) {
+  return apiFetch<void>(`/families/${familyId}`, { method: 'DELETE', headers: authHeaders(accessToken) });
 }
 
-export function listSharedAccounts(familyId: string, userId: string) {
-  return apiFetch<SharedAccountDto[]>(`/families/${familyId}/shared-accounts?userId=${encodeURIComponent(userId)}`);
+export function listSharedAccounts(familyId: string, accessToken: string) {
+  return apiFetch<SharedAccountDto[]>(`/families/${familyId}/shared-accounts`, { headers: authHeaders(accessToken) });
 }
 
 export function register(payload: RegisterRequest) {

@@ -8,8 +8,8 @@ import { AddMemberDto } from './dto/add-member.dto';
 export class FamiliesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateFamilyDto): Promise<FamilyDto> {
-    const existing = await this.prisma.familyMember.findUnique({ where: { userId: dto.userId } });
+  async create(userId: string, dto: CreateFamilyDto): Promise<FamilyDto> {
+    const existing = await this.prisma.familyMember.findUnique({ where: { userId } });
     if (existing) {
       throw new ConflictException('Vous appartenez déjà à une famille');
     }
@@ -17,9 +17,9 @@ export class FamiliesService {
     const family = await this.prisma.family.create({
       data: {
         name: dto.name,
-        ownerId: dto.userId,
+        ownerId: userId,
         members: {
-          create: { userId: dto.userId, role: 'owner' },
+          create: { userId, role: 'owner' },
         },
       },
       include: { members: { include: { user: true } } },
@@ -44,8 +44,8 @@ export class FamiliesService {
     return [this.toDto(family)];
   }
 
-  async addMember(familyId: string, dto: AddMemberDto): Promise<FamilyDto> {
-    const family = await this.getOwnedFamilyOrThrow(familyId, dto.requestingUserId);
+  async addMember(familyId: string, requestingUserId: string, dto: AddMemberDto): Promise<FamilyDto> {
+    const family = await this.getOwnedFamilyOrThrow(familyId, requestingUserId);
 
     const alreadyMember = await this.prisma.familyMember.findUnique({ where: { userId: dto.memberUserId } });
     if (alreadyMember) {
