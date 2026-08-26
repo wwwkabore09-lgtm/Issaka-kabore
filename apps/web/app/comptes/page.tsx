@@ -97,7 +97,12 @@ export default function ComptesPage() {
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-8 p-8">
       <div>
-        <h1 className="text-2xl font-semibold">Comptes</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold">Comptes</h1>
+          <Link href="/objectifs" className="text-xs text-muted-foreground underline">
+            Objectifs d&apos;épargne →
+          </Link>
+        </div>
         <p className="text-sm text-muted-foreground">
           Mobile Money, comptes bancaires et espèces, personnels ou professionnels.
         </p>

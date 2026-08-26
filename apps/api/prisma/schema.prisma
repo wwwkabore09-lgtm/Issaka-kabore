@@ -23,6 +23,7 @@ model User {
 
   accounts   Account[]
   categories Category[]
+  goals      Goal[]
 
   @@map("users")
 }
@@ -74,6 +75,7 @@ model Account {
   transactions   Transaction[]          @relation("SourceAccount")
   transfersIn    Transaction[]          @relation("TransferDestinationAccount")
   budgets        Budget[]
+  goals          Goal[]
 
   @@index([userId])
   @@map("accounts")
@@ -165,4 +167,39 @@ model Budget {
 
   @@unique([accountId, categoryId])
   @@map("budgets")
+}
+
+// Objectif d'épargne. accountId est optionnel : un objectif peut être rattaché à un
+// compte précis (ex: "épargner sur ce Wave") ou rester libre (suivi manuel uniquement).
+// Comme pour les comptes, le montant atteint n'est jamais un simple compteur : toujours
+// recalculé à partir de GoalContribution (grand livre append-only).
+model Goal {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId    String?
+  account      Account?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  name         String
+  targetAmount Decimal   @db.Decimal(18, 2)
+  targetDate   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  contributions GoalContribution[]
+
+  @@index([userId])
+  @@map("goals")
+}
+
+model GoalContribution {
+  id            String   @id @default(uuid())
+  goalId        String
+  goal          Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  amount        Decimal  @db.Decimal(18, 2)
+  note          String?
+  contributedAt DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([goalId, contributedAt])
+  @@map("goal_contributions")
 }

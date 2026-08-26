@@ -6,11 +6,16 @@ import type {
   CategoryDto,
   CreateAccountRequest,
   CreateBudgetRequest,
+  CreateGoalContributionRequest,
+  CreateGoalRequest,
   CreateTransactionRequest,
+  GoalContributionDto,
+  GoalProgressDto,
   TransactionDto,
   TransactionSummaryDto,
   UpdateAccountRequest,
   UpdateBudgetRequest,
+  UpdateGoalRequest,
 } from '@finza/shared-types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
@@ -94,4 +99,34 @@ export function updateBudget(id: string, userId: string, payload: UpdateBudgetRe
 
 export function deleteBudget(id: string, userId: string) {
   return apiFetch<void>(`/budgets/${id}?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' });
+}
+
+export function listGoals(userId: string) {
+  return apiFetch<GoalProgressDto[]>(`/goals?userId=${encodeURIComponent(userId)}`);
+}
+
+export function createGoal(payload: CreateGoalRequest) {
+  return apiFetch<void>('/goals', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export function updateGoal(id: string, userId: string, payload: UpdateGoalRequest) {
+  return apiFetch<void>(`/goals/${id}?userId=${encodeURIComponent(userId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteGoal(id: string, userId: string) {
+  return apiFetch<void>(`/goals/${id}?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' });
+}
+
+export function listGoalContributions(goalId: string, userId: string) {
+  return apiFetch<GoalContributionDto[]>(`/goals/${goalId}/contributions?userId=${encodeURIComponent(userId)}`);
+}
+
+export function addGoalContribution(goalId: string, payload: CreateGoalContributionRequest) {
+  return apiFetch<GoalContributionDto>(`/goals/${goalId}/contributions`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
