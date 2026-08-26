@@ -10,3 +10,82 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// User minimal : uniquement ce qu'il faut pour la relation de propriété des comptes.
+// L'authentification (JWT, refresh tokens, mot de passe/OTP) est un domaine séparé,
+// pas encore implémenté.
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  fullName  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accounts Account[]
+
+  @@map("users")
+}
+
+enum AccountType {
+  orange_money
+  moov_money
+  mtn_money
+  wave
+  bank_account
+  bank_card
+  cash
+}
+
+// Un compte professionnel reste un compte comme un autre : c'est cette valeur qui le
+// sépare du personnel, jamais visible par défaut aux autres membres en mode famille.
+enum AccountOwnership {
+  personal
+  professional
+}
+
+// Source d'une écriture de solde. Une seule valeur pour l'instant : le solde d'ouverture
+// saisi à la création du compte. Le domaine Transactions (pas encore implémenté) ajoutera
+// sa propre valeur ("transaction") par une migration dédiée quand il sera construit.
+enum BalanceEntrySource {
+  opening
+}
+
+model Account {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  type      AccountType
+  ownership AccountOwnership @default(personal)
+
+  // Code devise ISO (XOF, ...), validé côté service contre packages/config, jamais codé en dur ici.
+  currency String
+
+  // Cache dénormalisé pour l'affichage rapide. Ne fait jamais foi seul : toujours
+  // reconstruit/vérifié à partir de AccountBalanceEntry (grand livre).
+  currentBalance Decimal @default(0) @db.Decimal(18, 2)
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  balanceEntries AccountBalanceEntry[]
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+// Grand livre append-only : permet de reconstituer le solde d'un compte à toute date.
+model AccountBalanceEntry {
+  id        String              @id @default(uuid())
+  accountId String
+  account   Account             @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  amount    Decimal             @db.Decimal(18, 2)
+  source    BalanceEntrySource
+  note      String?
+  effectiveAt DateTime
+  createdAt DateTime            @default(now())
+
+  @@index([accountId, effectiveAt])
+  @@map("account_balance_entries")
+}
