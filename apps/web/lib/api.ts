@@ -6,15 +6,20 @@ import type {
   CategoryDto,
   CreateAccountRequest,
   CreateBudgetRequest,
+  CreateDebtPaymentRequest,
+  CreateDebtRequest,
   CreateGoalContributionRequest,
   CreateGoalRequest,
   CreateTransactionRequest,
+  DebtPaymentDto,
+  DebtProgressDto,
   GoalContributionDto,
   GoalProgressDto,
   TransactionDto,
   TransactionSummaryDto,
   UpdateAccountRequest,
   UpdateBudgetRequest,
+  UpdateDebtRequest,
   UpdateGoalRequest,
 } from '@finza/shared-types';
 
@@ -126,6 +131,37 @@ export function listGoalContributions(goalId: string, userId: string) {
 
 export function addGoalContribution(goalId: string, payload: CreateGoalContributionRequest) {
   return apiFetch<GoalContributionDto>(`/goals/${goalId}/contributions`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listDebts(userId: string, type?: 'debt' | 'credit') {
+  const query = new URLSearchParams({ userId, ...(type ? { type } : {}) });
+  return apiFetch<DebtProgressDto[]>(`/debts?${query.toString()}`);
+}
+
+export function createDebt(payload: CreateDebtRequest) {
+  return apiFetch<void>('/debts', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export function updateDebt(id: string, userId: string, payload: UpdateDebtRequest) {
+  return apiFetch<void>(`/debts/${id}?userId=${encodeURIComponent(userId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteDebt(id: string, userId: string) {
+  return apiFetch<void>(`/debts/${id}?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' });
+}
+
+export function listDebtPayments(debtId: string, userId: string) {
+  return apiFetch<DebtPaymentDto[]>(`/debts/${debtId}/payments?userId=${encodeURIComponent(userId)}`);
+}
+
+export function addDebtPayment(debtId: string, payload: CreateDebtPaymentRequest) {
+  return apiFetch<DebtPaymentDto>(`/debts/${debtId}/payments`, {
     method: 'POST',
     body: JSON.stringify(payload),
   });

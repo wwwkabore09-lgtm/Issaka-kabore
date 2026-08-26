@@ -24,6 +24,7 @@ model User {
   accounts   Account[]
   categories Category[]
   goals      Goal[]
+  debts      Debt[]
 
   @@map("users")
 }
@@ -76,6 +77,7 @@ model Account {
   transfersIn    Transaction[]          @relation("TransferDestinationAccount")
   budgets        Budget[]
   goals          Goal[]
+  debts          Debt[]
 
   @@index([userId])
   @@map("accounts")
@@ -202,4 +204,46 @@ model GoalContribution {
 
   @@index([goalId, contributedAt])
   @@map("goal_contributions")
+}
+
+// "debt" = j'ai emprunté (je dois) ; "credit" = j'ai prêté (on me doit). Même domaine,
+// deux directions, comme l'exige le modèle de données (dettes ET créances).
+enum DebtDirection {
+  debt
+  credit
+}
+
+// Le solde restant n'est jamais un compteur : toujours recalculé à partir de DebtPayment
+// (grand livre append-only), même principe que Account et Goal.
+model Debt {
+  id               String        @id @default(uuid())
+  userId           String
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type             DebtDirection
+  counterpartyName String
+  accountId        String?
+  account          Account?      @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  principalAmount  Decimal       @db.Decimal(18, 2)
+  dueDate          DateTime?
+  description      String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  payments DebtPayment[]
+
+  @@index([userId])
+  @@map("debts")
+}
+
+model DebtPayment {
+  id      String   @id @default(uuid())
+  debtId  String
+  debt    Debt     @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  amount  Decimal  @db.Decimal(18, 2)
+  note    String?
+  paidAt  DateTime
+  createdAt DateTime @default(now())
+
+  @@index([debtId, paidAt])
+  @@map("debt_payments")
 }
