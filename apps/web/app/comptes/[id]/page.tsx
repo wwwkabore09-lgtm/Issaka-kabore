@@ -3,15 +3,25 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import type { AccountDto, CategoryDto, TransactionDto, TransactionSummaryDto, TransactionType } from '@finza/shared-types';
+import type {
+  AccountDto,
+  BudgetProgressDto,
+  CategoryDto,
+  TransactionDto,
+  TransactionSummaryDto,
+  TransactionType,
+} from '@finza/shared-types';
 import { TRANSACTION_TYPES } from '@finza/shared-types';
 import { CURRENCIES } from '@finza/config';
 import { cn } from '@finza/ui';
 import {
+  createBudget,
   createTransaction,
+  deleteBudget,
   getAccount,
   getTransactionSummary,
   listAccounts,
+  listBudgets,
   listCategories,
   listTransactions,
 } from '@/lib/api';
@@ -50,6 +60,7 @@ export default function CompteDetailPage() {
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [transactions, setTransactions] = useState<TransactionDto[]>([]);
   const [summary, setSummary] = useState<TransactionSummaryDto | null>(null);
+  const [budgets, setBudgets] = useState<BudgetProgressDto[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -59,6 +70,10 @@ export default function CompteDetailPage() {
   const [transferToAccountId, setTransferToAccountId] = useState('');
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const [budgetCategoryId, setBudgetCategoryId] = useState('');
+  const [budgetAmount, setBudgetAmount] = useState('');
+  const [submittingBudget, setSubmittingBudget] = useState(false);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(USER_ID_STORAGE_KEY);
@@ -78,26 +93,59 @@ export default function CompteDetailPage() {
     [categories, type],
   );
 
+  const budgetableCategories = useMemo(() => {
+    const budgeted = new Set(budgets.map((b) => b.categoryId));
+    return categories.filter((c) => c.kind === 'expense' && !budgeted.has(c.id));
+  }, [categories, budgets]);
+
   async function refreshAll() {
     setLoading(true);
     setError(null);
     try {
-      const [accountRes, accountsRes, categoriesRes, transactionsRes, summaryRes] = await Promise.all([
+      const [accountRes, accountsRes, categoriesRes, transactionsRes, summaryRes, budgetsRes] = await Promise.all([
         getAccount(accountId, userId),
         listAccounts(userId),
         listCategories(userId),
         listTransactions(accountId, userId),
         getTransactionSummary(accountId, userId, startOfMonthIso(), endOfMonthIso()),
+        listBudgets(accountId, userId),
       ]);
       setAccount(accountRes);
       setOtherAccounts(accountsRes.filter((a) => a.id !== accountId));
       setCategories(categoriesRes);
       setTransactions(transactionsRes);
       setSummary(summaryRes);
+      setBudgets(budgetsRes);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleCreateBudget(event: React.FormEvent) {
+    event.preventDefault();
+    setSubmittingBudget(true);
+    setError(null);
+    try {
+      await createBudget({ userId, accountId, categoryId: budgetCategoryId, amount: budgetAmount });
+      setBudgetCategoryId('');
+      setBudgetAmount('');
+      await refreshAll();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+    } finally {
+      setSubmittingBudget(false);
+    }
+  }
+
+  async function handleDeleteBudget(budgetId: string) {
+    setError(null);
+    try {
+      await deleteBudget(budgetId, userId);
+      await refreshAll();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue');
     }
   }
 
@@ -178,6 +226,85 @@ export default function CompteDetailPage() {
           </div>
         </div>
       )}
+
+      <div className="flex flex-col gap-2">
+        <h2 className="font-medium">Budgets (mois courant)</h2>
+
+        {budgets.length === 0 && <p className="text-sm text-muted-foreground">Aucun budget défini pour ce compte.</p>}
+
+        <ul className="flex flex-col gap-2">
+          {budgets.map((b) => {
+            const overBudget = b.percentage > 100;
+            return (
+              <li key={b.budgetId} className="rounded-lg border border-border p-3">
+                <div className="flex items-center justify-between">
+                  <p className="font-medium">{b.categoryLabel}</p>
+                  <div className="flex items-center gap-2">
+                    <span className={cn('text-sm', overBudget && 'text-destructive')}>
+                      {account ? formatAmount(b.spent, account.currency) : b.spent} /{' '}
+                      {account ? formatAmount(b.limit, account.currency) : b.limit}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteBudget(b.budgetId)}
+                      className="text-xs text-muted-foreground underline"
+                    >
+                      Supprimer
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className={cn('h-full rounded-full', overBudget ? 'bg-destructive' : 'bg-primary')}
+                    style={{ width: `${Math.min(b.percentage, 100)}%` }}
+                  />
+                </div>
+                {overBudget && (
+                  <p className="mt-1 text-xs text-destructive">Budget dépassé de {account ? formatAmount(String(Number(b.spent) - Number(b.limit)), account.currency) : ''}</p>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+
+        {budgetableCategories.length > 0 && (
+          <form onSubmit={handleCreateBudget} className="flex flex-wrap items-center gap-2 rounded-lg border border-border p-3">
+            <select
+              value={budgetCategoryId}
+              onChange={(event) => setBudgetCategoryId(event.target.value)}
+              required
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="" disabled>
+                Catégorie
+              </option>
+              {budgetableCategories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+            <input
+              value={budgetAmount}
+              onChange={(event) => setBudgetAmount(event.target.value)}
+              placeholder="Montant mensuel"
+              inputMode="decimal"
+              required
+              className="w-40 rounded-md border border-input bg-background px-3 py-2 text-sm"
+            />
+            <button
+              type="submit"
+              disabled={submittingBudget}
+              className={cn(
+                'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
+                submittingBudget && 'opacity-60',
+              )}
+            >
+              {submittingBudget ? 'Ajout…' : 'Définir un budget'}
+            </button>
+          </form>
+        )}
+      </div>
 
       <form onSubmit={handleCreate} className="flex flex-col gap-3 rounded-lg border border-border p-4">
         <h2 className="font-medium">Ajouter une transaction</h2>

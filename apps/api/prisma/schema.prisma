@@ -73,6 +73,7 @@ model Account {
   balanceEntries AccountBalanceEntry[]
   transactions   Transaction[]          @relation("SourceAccount")
   transfersIn    Transaction[]          @relation("TransferDestinationAccount")
+  budgets        Budget[]
 
   @@index([userId])
   @@map("accounts")
@@ -110,6 +111,7 @@ model Category {
   createdAt DateTime     @default(now())
 
   transactions Transaction[]
+  budgets      Budget[]
 
   @@unique([userId, key])
   @@map("categories")
@@ -146,4 +148,21 @@ model Transaction {
 
   @@index([accountId, occurredAt])
   @@map("transactions")
+}
+
+// Budget mensuel récurrent pour une catégorie de dépense donnée sur un compte. Pas de
+// champ de période : la progression est toujours calculée à la demande sur l'intervalle
+// demandé (par défaut le mois courant), jamais stockée.
+model Budget {
+  id         String   @id @default(uuid())
+  accountId  String
+  account    Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+  amount     Decimal  @db.Decimal(18, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([accountId, categoryId])
+  @@map("budgets")
 }

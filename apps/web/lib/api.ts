@@ -1,12 +1,16 @@
 import type {
   AccountBalanceResponse,
   AccountDto,
+  BudgetDto,
+  BudgetProgressDto,
   CategoryDto,
   CreateAccountRequest,
+  CreateBudgetRequest,
   CreateTransactionRequest,
   TransactionDto,
   TransactionSummaryDto,
   UpdateAccountRequest,
+  UpdateBudgetRequest,
 } from '@finza/shared-types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
@@ -21,6 +25,10 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     const body = await res.json().catch(() => null);
     const message = Array.isArray(body?.message) ? body.message.join(', ') : (body?.message ?? res.statusText);
     throw new Error(message);
+  }
+
+  if (res.status === 204) {
+    return undefined as T;
   }
 
   return res.json() as Promise<T>;
@@ -66,4 +74,24 @@ export function createTransaction(payload: CreateTransactionRequest) {
 export function getTransactionSummary(accountId: string, userId: string, from: string, to: string) {
   const query = new URLSearchParams({ userId, accountId, from, to });
   return apiFetch<TransactionSummaryDto>(`/transactions/summary?${query.toString()}`);
+}
+
+export function listBudgets(accountId: string, userId: string) {
+  const query = new URLSearchParams({ userId, accountId });
+  return apiFetch<BudgetProgressDto[]>(`/budgets?${query.toString()}`);
+}
+
+export function createBudget(payload: CreateBudgetRequest) {
+  return apiFetch<BudgetDto>('/budgets', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export function updateBudget(id: string, userId: string, payload: UpdateBudgetRequest) {
+  return apiFetch<BudgetDto>(`/budgets/${id}?userId=${encodeURIComponent(userId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteBudget(id: string, userId: string) {
+  return apiFetch<void>(`/budgets/${id}?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' });
 }

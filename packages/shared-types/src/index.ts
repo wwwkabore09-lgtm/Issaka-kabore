@@ -3,5 +3,6 @@
 // au fur et à mesure de l'implémentation de chaque module, jamais tous en une fois.
 
 export * from './accounts';
+export * from './budgets';
 export * from './categories';
 export * from './transactions';
