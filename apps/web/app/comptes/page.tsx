@@ -109,6 +109,9 @@ export default function ComptesPage() {
             <Link href="/abonnements" className="text-xs text-muted-foreground underline">
               Abonnements →
             </Link>
+            <Link href="/rapports" className="text-xs text-muted-foreground underline">
+              Rapports →
+            </Link>
           </div>
         </div>
         <p className="text-sm text-muted-foreground">

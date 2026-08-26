@@ -1,0 +1,180 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import * as request from 'supertest';
+import { AppModule } from '../src/app.module';
+import { PrismaService } from '../src/prisma/prisma.service';
+
+describe('ReportsController (e2e)', () => {
+  let app: INestApplication;
+  let prisma: PrismaService;
+  let userId: string;
+  let accountId: string;
+  let expenseCategoryId: string;
+  let incomeCategoryId: string;
+
+  beforeAll(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+    await app.init();
+
+    prisma = app.get(PrismaService);
+
+    const user = await prisma.user.create({
+      data: { email: `reports-e2e-${Date.now()}@finza.test`, fullName: 'Test User' },
+    });
+    userId = user.id;
+
+    const [expenseCategory, incomeCategory] = await Promise.all([
+      prisma.category.create({ data: { userId, key: 'alimentation-report-test', label: 'Alimentation', kind: 'expense' } }),
+      prisma.category.create({ data: { userId, key: 'salaire-report-test', label: 'Salaire', kind: 'income' } }),
+    ]);
+    expenseCategoryId = expenseCategory.id;
+    incomeCategoryId = incomeCategory.id;
+
+    const accountRes = await request(app.getHttpServer())
+      .post('/accounts')
+      .send({ userId, name: 'Compte rapport', type: 'cash', currency: 'XOF', openingBalance: '10000' });
+    accountId = accountRes.body.id;
+
+    await request(app.getHttpServer())
+      .post('/budgets')
+      .send({ userId, accountId, categoryId: expenseCategoryId, amount: '20000' });
+
+    await request(app.getHttpServer())
+      .post('/transactions')
+      .send({
+        userId,
+        accountId,
+        type: 'income',
+        amount: '80000',
+        categoryId: incomeCategoryId,
+        occurredAt: new Date().toISOString(),
+      });
+    await request(app.getHttpServer())
+      .post('/transactions')
+      .send({
+        userId,
+        accountId,
+        type: 'expense',
+        amount: '15000',
+        categoryId: expenseCategoryId,
+        occurredAt: new Date().toISOString(),
+      });
+
+    await request(app.getHttpServer())
+      .post('/goals')
+      .send({ userId, name: 'Fonds urgence rapport', targetAmount: '50000' });
+
+    await request(app.getHttpServer())
+      .post('/debts')
+      .send({ userId, type: 'debt', counterpartyName: 'Test rapport', principalAmount: '30000' });
+
+    await request(app.getHttpServer())
+      .post('/subscriptions')
+      .send({
+        userId,
+        name: 'Abonnement rapport',
+        amount: '5000',
+        billingFrequency: 'monthly',
+        nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      });
+  });
+
+  afterAll(async () => {
+    await prisma.report.deleteMany({ where: { userId } });
+    await prisma.subscription.deleteMany({ where: { userId } });
+    await prisma.debtPayment.deleteMany({ where: { debt: { userId } } });
+    await prisma.debt.deleteMany({ where: { userId } });
+    await prisma.goalContribution.deleteMany({ where: { goal: { userId } } });
+    await prisma.goal.deleteMany({ where: { userId } });
+    await prisma.budget.deleteMany({ where: { accountId } });
+    await prisma.transaction.deleteMany({ where: { accountId } });
+    await prisma.accountBalanceEntry.deleteMany({ where: { accountId } });
+    await prisma.account.deleteMany({ where: { userId } });
+    await prisma.category.deleteMany({ where: { userId } });
+    await prisma.user.delete({ where: { id: userId } });
+    await app.close();
+  });
+
+  it('génère un rapport qui agrège tous les domaines pour la période courante', async () => {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+
+    const res = await request(app.getHttpServer())
+      .post('/reports/generate')
+      .send({ userId, from, to })
+      .expect(201);
+
+    expect(res.body.snapshot.accounts).toHaveLength(1);
+    expect(res.body.snapshot.accounts[0].currentBalance).toBe('75000.00'); // 10000 + 80000 - 15000
+
+    expect(res.body.snapshot.cashFlow.totalIncome).toBe('80000.00');
+    expect(res.body.snapshot.cashFlow.totalExpense).toBe('15000.00');
+    expect(res.body.snapshot.cashFlow.netFlow).toBe('65000.00');
+
+    expect(res.body.snapshot.budgets).toHaveLength(1);
+    expect(res.body.snapshot.budgets[0].spent).toBe('15000.00');
+
+    expect(res.body.snapshot.goals.some((g: { name: string }) => g.name === 'Fonds urgence rapport')).toBe(true);
+    expect(res.body.snapshot.debts.some((d: { counterpartyName: string }) => d.counterpartyName === 'Test rapport')).toBe(
+      true,
+    );
+    expect(res.body.snapshot.subscriptions.totalMonthlyRecurring).toBe('5000.00');
+  });
+
+  it('utilise un titre personnalisé quand fourni, sinon un titre par défaut basé sur la période', async () => {
+    const withTitle = await request(app.getHttpServer())
+      .post('/reports/generate')
+      .send({ userId, title: 'Rapport perso' })
+      .expect(201);
+    expect(withTitle.body.title).toBe('Rapport perso');
+
+    const withoutTitle = await request(app.getHttpServer())
+      .post('/reports/generate')
+      .send({ userId })
+      .expect(201);
+    expect(withoutTitle.body.title).toMatch(/^Rapport du \d{4}-\d{2}-\d{2} au \d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('rejette une période invalide (from après to)', async () => {
+    await request(app.getHttpServer())
+      .post('/reports/generate')
+      .send({ userId, from: '2026-06-30T00:00:00.000Z', to: '2026-06-01T00:00:00.000Z' })
+      .expect(400);
+  });
+
+  it('liste les rapports générés, puis en supprime un', async () => {
+    const genRes = await request(app.getHttpServer())
+      .post('/reports/generate')
+      .send({ userId, title: 'À supprimer' })
+      .expect(201);
+
+    const listRes = await request(app.getHttpServer()).get('/reports').query({ userId }).expect(200);
+    expect(listRes.body.some((r: { id: string }) => r.id === genRes.body.id)).toBe(true);
+
+    await request(app.getHttpServer()).delete(`/reports/${genRes.body.id}`).query({ userId }).expect(204);
+
+    await request(app.getHttpServer()).get(`/reports/${genRes.body.id}`).query({ userId }).expect(404);
+  });
+
+  it("renvoie 404 (jamais 403) pour le rapport d'un autre utilisateur", async () => {
+    const otherUser = await prisma.user.create({
+      data: { email: `reports-e2e-other-${Date.now()}@finza.test`, fullName: 'Autre utilisateur' },
+    });
+
+    const genRes = await request(app.getHttpServer())
+      .post('/reports/generate')
+      .send({ userId: otherUser.id })
+      .expect(201);
+
+    await request(app.getHttpServer()).get(`/reports/${genRes.body.id}`).query({ userId }).expect(404);
+
+    await prisma.report.delete({ where: { id: genRes.body.id } });
+    await prisma.user.delete({ where: { id: otherUser.id } });
+  });
+});

@@ -7,5 +7,6 @@ import { BudgetsService } from './budgets.service';
   imports: [AccountsModule],
   controllers: [BudgetsController],
   providers: [BudgetsService],
+  exports: [BudgetsService],
 })
 export class BudgetsModule {}

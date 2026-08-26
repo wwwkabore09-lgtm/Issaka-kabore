@@ -26,6 +26,7 @@ model User {
   goals         Goal[]
   debts         Debt[]
   subscriptions Subscription[]
+  reports       Report[]
 
   @@map("users")
 }
@@ -278,4 +279,22 @@ model Subscription {
 
   @@index([userId])
   @@map("subscriptions")
+}
+
+// Instantané figé des chiffres clés de l'utilisateur sur une période, agrégés depuis les
+// autres domaines (comptes, revenus/dépenses, budgets, objectifs, dettes, abonnements).
+// Contrairement à ces domaines, un rapport n'est jamais recalculé après coup : c'est un
+// historique immuable (pas de mise à jour possible une fois généré).
+model Report {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  periodStart DateTime
+  periodEnd   DateTime
+  generatedAt DateTime @default(now())
+  snapshot    Json
+
+  @@index([userId, generatedAt])
+  @@map("reports")
 }

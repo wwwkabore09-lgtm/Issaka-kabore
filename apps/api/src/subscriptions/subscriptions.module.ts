@@ -7,5 +7,6 @@ import { SubscriptionsService } from './subscriptions.service';
   imports: [AccountsModule],
   controllers: [SubscriptionsController],
   providers: [SubscriptionsService],
+  exports: [SubscriptionsService],
 })
 export class SubscriptionsModule {}

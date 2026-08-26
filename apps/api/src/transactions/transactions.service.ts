@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { TransactionDto, TransactionSummaryDto } from '@finza/shared-types';
+import type { TransactionDto, TransactionSummaryDto, TransactionUserSummaryDto } from '@finza/shared-types';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccountsService } from '../accounts/accounts.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
@@ -137,6 +137,31 @@ export class TransactionsService {
 
     return {
       accountId,
+      from: fromDate.toISOString(),
+      to: toDate.toISOString(),
+      totalIncome: totalIncome.toFixed(2),
+      totalExpense: totalExpense.toFixed(2),
+      netFlow: totalIncome.sub(totalExpense).toFixed(2),
+    };
+  }
+
+  // Même agrégat que getSummary, mais tous comptes confondus pour l'utilisateur
+  // (utilisé par le domaine Reports pour construire un instantané global).
+  async getUserSummary(userId: string, from: string, to: string): Promise<TransactionUserSummaryDto> {
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+
+    const grouped = await this.prisma.transaction.groupBy({
+      by: ['type'],
+      where: { account: { userId }, occurredAt: { gte: fromDate, lte: toDate } },
+      _sum: { amount: true },
+    });
+
+    const totalIncome = grouped.find((g) => g.type === 'income')?._sum.amount ?? new Prisma.Decimal(0);
+    const totalExpense = grouped.find((g) => g.type === 'expense')?._sum.amount ?? new Prisma.Decimal(0);
+
+    return {
+      userId,
       from: fromDate.toISOString(),
       to: toDate.toISOString(),
       totalIncome: totalIncome.toFixed(2),

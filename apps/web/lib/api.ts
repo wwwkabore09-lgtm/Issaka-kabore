@@ -14,8 +14,10 @@ import type {
   CreateSubscriptionRequest,
   DebtPaymentDto,
   DebtProgressDto,
+  GenerateReportRequest,
   GoalContributionDto,
   GoalProgressDto,
+  ReportDto,
   SubscriptionDto,
   SubscriptionsSummaryDto,
   TransactionDto,
@@ -197,4 +199,16 @@ export function renewSubscription(id: string, userId: string) {
 
 export function deleteSubscription(id: string, userId: string) {
   return apiFetch<void>(`/subscriptions/${id}?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' });
+}
+
+export function listReports(userId: string) {
+  return apiFetch<ReportDto[]>(`/reports?userId=${encodeURIComponent(userId)}`);
+}
+
+export function generateReport(payload: GenerateReportRequest) {
+  return apiFetch<ReportDto>('/reports/generate', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export function deleteReport(id: string, userId: string) {
+  return apiFetch<void>(`/reports/${id}?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' });
 }

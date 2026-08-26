@@ -10,6 +10,7 @@ import { BudgetsModule } from './budgets/budgets.module';
 import { GoalsModule } from './goals/goals.module';
 import { DebtsModule } from './debts/debts.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
     GoalsModule,
     DebtsModule,
     SubscriptionsModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

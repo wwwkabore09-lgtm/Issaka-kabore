@@ -38,3 +38,14 @@ export interface TransactionSummaryDto {
   totalExpense: string;
   netFlow: string;
 }
+
+// Même règle d'exclusion des transferts, mais agrégée sur tous les comptes de l'utilisateur
+// plutôt qu'un seul (utilisé par le domaine Reports).
+export interface TransactionUserSummaryDto {
+  userId: string;
+  from: string;
+  to: string;
+  totalIncome: string;
+  totalExpense: string;
+  netFlow: string;
+}
