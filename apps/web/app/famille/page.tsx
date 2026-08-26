@@ -1,0 +1,251 @@
+'use client';
+
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import type { FamilyDto, SharedAccountDto } from '@finza/shared-types';
+import { cn } from '@finza/ui';
+import {
+  addFamilyMember,
+  createFamily,
+  deleteFamily,
+  listMyFamilies,
+  listSharedAccounts,
+  removeFamilyMember,
+} from '@/lib/api';
+
+const USER_ID_STORAGE_KEY = 'finza_demo_user_id';
+
+function formatXof(value: string) {
+  return `${Number(value).toLocaleString('fr-FR')} FCFA`;
+}
+
+export default function FamillePage() {
+  const [userId, setUserId] = useState('');
+  const [family, setFamily] = useState<FamilyDto | null>(null);
+  const [sharedAccounts, setSharedAccounts] = useState<SharedAccountDto[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const [familyName, setFamilyName] = useState('');
+  const [memberUserId, setMemberUserId] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(USER_ID_STORAGE_KEY);
+    if (stored) setUserId(stored);
+  }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    window.localStorage.setItem(USER_ID_STORAGE_KEY, userId);
+    void refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  async function refresh() {
+    setLoading(true);
+    setError(null);
+    try {
+      const families = await listMyFamilies(userId);
+      const mine = families[0] ?? null;
+      setFamily(mine);
+      setSharedAccounts(mine ? await listSharedAccounts(mine.id, userId) : []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCreate(event: React.FormEvent) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    try {
+      await createFamily({ userId, name: familyName });
+      setFamilyName('');
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleAddMember(event: React.FormEvent) {
+    event.preventDefault();
+    if (!family) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await addFamilyMember(family.id, { requestingUserId: userId, memberUserId });
+      setMemberUserId('');
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleRemoveMember(targetUserId: string) {
+    if (!family) return;
+    setError(null);
+    try {
+      await removeFamilyMember(family.id, targetUserId, userId);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+    }
+  }
+
+  async function handleDeleteFamily() {
+    if (!family) return;
+    setError(null);
+    try {
+      await deleteFamily(family.id, userId);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+    }
+  }
+
+  const isOwner = family?.ownerId === userId;
+
+  return (
+    <main className="mx-auto flex max-w-2xl flex-col gap-8 p-8">
+      <div>
+        <Link href="/comptes" className="text-xs text-muted-foreground underline">
+          ← Comptes
+        </Link>
+        <h1 className="text-2xl font-semibold">Famille</h1>
+        <p className="text-sm text-muted-foreground">
+          Un compte n&apos;est jamais visible aux autres membres tant qu&apos;il n&apos;est pas explicitement partagé
+          (page du compte).
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label htmlFor="userId" className="text-sm font-medium">
+          Identifiant utilisateur
+        </label>
+        <input
+          id="userId"
+          value={userId}
+          onChange={(event) => setUserId(event.target.value.trim())}
+          placeholder="uuid — via npm run prisma:seed --workspace=apps/api"
+          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+        />
+      </div>
+
+      {error && (
+        <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {error}
+        </p>
+      )}
+
+      {userId && !loading && !family && (
+        <form onSubmit={handleCreate} className="flex flex-col gap-3 rounded-lg border border-border p-4">
+          <h2 className="font-medium">Vous n&apos;appartenez à aucune famille</h2>
+          <div className="flex gap-2">
+            <input
+              value={familyName}
+              onChange={(event) => setFamilyName(event.target.value)}
+              placeholder="Nom de la famille (ex: Famille Kaboré)"
+              required
+              className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+            />
+            <button
+              type="submit"
+              disabled={submitting}
+              className={cn(
+                'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
+                submitting && 'opacity-60',
+              )}
+            >
+              {submitting ? 'Création…' : 'Créer'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {family && (
+        <>
+          <div className="rounded-lg border border-border p-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-medium">{family.name}</h2>
+              {isOwner && (
+                <button type="button" onClick={handleDeleteFamily} className="text-xs text-destructive underline">
+                  Supprimer la famille
+                </button>
+              )}
+            </div>
+
+            <ul className="mt-3 flex flex-col gap-2">
+              {family.members.map((m) => (
+                <li key={m.userId} className="flex items-center justify-between text-sm">
+                  <span>
+                    {m.fullName} <span className="text-xs text-muted-foreground">({m.role === 'owner' ? 'propriétaire' : 'membre'})</span>
+                  </span>
+                  {(isOwner && m.role !== 'owner') || m.userId === userId ? (
+                    m.role !== 'owner' && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMember(m.userId)}
+                        className="text-xs text-muted-foreground underline"
+                      >
+                        {m.userId === userId ? 'Quitter' : 'Retirer'}
+                      </button>
+                    )
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+
+            {isOwner && (
+              <form onSubmit={handleAddMember} className="mt-4 flex gap-2 border-t border-border pt-4">
+                <input
+                  value={memberUserId}
+                  onChange={(event) => setMemberUserId(event.target.value.trim())}
+                  placeholder="Identifiant utilisateur à ajouter"
+                  required
+                  className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className={cn(
+                    'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
+                    submitting && 'opacity-60',
+                  )}
+                >
+                  Ajouter
+                </button>
+              </form>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <h2 className="font-medium">Comptes partagés</h2>
+            {sharedAccounts.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                Aucun compte partagé pour l&apos;instant. Partagez un compte depuis sa page de détail.
+              </p>
+            )}
+            <ul className="flex flex-col gap-2">
+              {sharedAccounts.map((a) => (
+                <li key={a.id} className="flex items-center justify-between rounded-lg border border-border p-3">
+                  <div>
+                    <p className="font-medium">{a.name}</p>
+                    <p className="text-xs text-muted-foreground">{a.ownerName}</p>
+                  </div>
+                  <span className="font-medium">{formatXof(a.currentBalance)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </>
+      )}
+    </main>
+  );
+}

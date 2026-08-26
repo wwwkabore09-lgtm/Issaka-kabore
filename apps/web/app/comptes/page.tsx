@@ -112,6 +112,9 @@ export default function ComptesPage() {
             <Link href="/rapports" className="text-xs text-muted-foreground underline">
               Rapports →
             </Link>
+            <Link href="/famille" className="text-xs text-muted-foreground underline">
+              Famille →
+            </Link>
           </div>
         </div>
         <p className="text-sm text-muted-foreground">

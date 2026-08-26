@@ -11,6 +11,7 @@ import { GoalsModule } from './goals/goals.module';
 import { DebtsModule } from './debts/debts.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { ReportsModule } from './reports/reports.module';
+import { FamiliesModule } from './families/families.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ReportsModule } from './reports/reports.module';
     DebtsModule,
     SubscriptionsModule,
     ReportsModule,
+    FamiliesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

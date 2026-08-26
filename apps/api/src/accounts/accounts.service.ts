@@ -61,6 +61,16 @@ export class AccountsService {
   async update(id: string, userId: string, dto: UpdateAccountDto): Promise<AccountDto> {
     await this.findAccountOrThrow(id, userId);
 
+    if (dto.isSharedWithFamily) {
+      // Ne dépend pas de FamiliesService pour éviter un import circulaire entre modules
+      // (FamiliesModule importe déjà AccountsModule pour lire les comptes partagés) :
+      // une simple vérification d'appartenance suffit ici.
+      const membership = await this.prisma.familyMember.findUnique({ where: { userId } });
+      if (!membership) {
+        throw new BadRequestException("Vous devez appartenir à une famille pour partager un compte");
+      }
+    }
+
     const updated = await this.prisma.account.update({
       where: { id },
       data: dto,
@@ -119,6 +129,7 @@ export class AccountsService {
     currency: string;
     currentBalance: Prisma.Decimal;
     isActive: boolean;
+    isSharedWithFamily: boolean;
     createdAt: Date;
     updatedAt: Date;
   }): AccountDto {
@@ -131,6 +142,7 @@ export class AccountsService {
       currency: account.currency,
       currentBalance: account.currentBalance.toFixed(2),
       isActive: account.isActive,
+      isSharedWithFamily: account.isSharedWithFamily,
       createdAt: account.createdAt.toISOString(),
       updatedAt: account.updatedAt.toISOString(),
     };

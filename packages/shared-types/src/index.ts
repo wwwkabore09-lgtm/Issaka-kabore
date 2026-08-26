@@ -6,6 +6,7 @@ export * from './accounts';
 export * from './budgets';
 export * from './categories';
 export * from './debts';
+export * from './families';
 export * from './goals';
 export * from './reports';
 export * from './subscriptions';

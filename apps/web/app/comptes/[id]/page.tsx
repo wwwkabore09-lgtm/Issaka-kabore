@@ -24,6 +24,7 @@ import {
   listBudgets,
   listCategories,
   listTransactions,
+  updateAccount,
 } from '@/lib/api';
 import { ACCOUNT_TYPE_LABELS } from '@/lib/account-labels';
 
@@ -149,6 +150,17 @@ export default function CompteDetailPage() {
     }
   }
 
+  async function handleToggleShare() {
+    if (!account) return;
+    setError(null);
+    try {
+      await updateAccount(accountId, userId, { isSharedWithFamily: !account.isSharedWithFamily });
+      await refreshAll();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+    }
+  }
+
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault();
     setSubmitting(true);
@@ -201,6 +213,15 @@ export default function CompteDetailPage() {
             {ACCOUNT_TYPE_LABELS[account.type]} · {account.ownership === 'personal' ? 'Personnel' : 'Professionnel'} ·{' '}
             {formatAmount(account.currentBalance, account.currency)}
           </p>
+        )}
+        {account && (
+          <button
+            type="button"
+            onClick={handleToggleShare}
+            className="mt-1 text-xs text-muted-foreground underline"
+          >
+            {account.isSharedWithFamily ? '✓ Partagé avec la famille — retirer le partage' : 'Partager avec la famille'}
+          </button>
         )}
       </div>
 

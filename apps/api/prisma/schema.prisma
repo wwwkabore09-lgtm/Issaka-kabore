@@ -27,6 +27,11 @@ model User {
   debts         Debt[]
   subscriptions Subscription[]
   reports       Report[]
+  ownedFamilies Family[]      @relation("FamilyOwner")
+  // Un utilisateur appartient à au plus une famille (FamilyMember.userId est unique) :
+  // simplifie "quels comptes sont visibles" sans ambiguïté tant qu'il n'y a qu'un seul
+  // foyer à gérer. Étendre à plusieurs familles resterait une évolution possible plus tard.
+  familyMembership FamilyMember? @relation("FamilyMembership")
 
   @@map("users")
 }
@@ -69,6 +74,10 @@ model Account {
   // Cache dénormalisé pour l'affichage rapide. Ne fait jamais foi seul : toujours
   // reconstruit/vérifié à partir de AccountBalanceEntry (grand livre).
   currentBalance Decimal @default(0) @db.Decimal(18, 2)
+
+  // false par défaut : un compte n'est jamais visible aux autres membres de la famille
+  // sans action explicite du propriétaire (règle non négociable).
+  isSharedWithFamily Boolean @default(false)
 
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -297,4 +306,36 @@ model Report {
 
   @@index([userId, generatedAt])
   @@map("reports")
+}
+
+model Family {
+  id        String   @id @default(uuid())
+  name      String
+  ownerId   String
+  owner     User     @relation("FamilyOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members FamilyMember[]
+
+  @@map("families")
+}
+
+enum FamilyRole {
+  owner
+  member
+}
+
+// userId unique : voir le commentaire sur User.familyMembership — un utilisateur ne peut
+// appartenir qu'à une seule famille dans ce MVP.
+model FamilyMember {
+  id       String     @id @default(uuid())
+  familyId String
+  family   Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  userId   String     @unique
+  user     User       @relation("FamilyMembership", fields: [userId], references: [id], onDelete: Cascade)
+  role     FamilyRole
+  joinedAt DateTime   @default(now())
+
+  @@map("family_members")
 }

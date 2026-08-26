@@ -11,13 +11,17 @@ import type {
   CreateGoalContributionRequest,
   CreateGoalRequest,
   CreateTransactionRequest,
+  AddFamilyMemberRequest,
+  CreateFamilyRequest,
   CreateSubscriptionRequest,
   DebtPaymentDto,
   DebtProgressDto,
+  FamilyDto,
   GenerateReportRequest,
   GoalContributionDto,
   GoalProgressDto,
   ReportDto,
+  SharedAccountDto,
   SubscriptionDto,
   SubscriptionsSummaryDto,
   TransactionDto,
@@ -211,4 +215,31 @@ export function generateReport(payload: GenerateReportRequest) {
 
 export function deleteReport(id: string, userId: string) {
   return apiFetch<void>(`/reports/${id}?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' });
+}
+
+export function listMyFamilies(userId: string) {
+  return apiFetch<FamilyDto[]>(`/families?userId=${encodeURIComponent(userId)}`);
+}
+
+export function createFamily(payload: CreateFamilyRequest) {
+  return apiFetch<FamilyDto>('/families', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export function addFamilyMember(familyId: string, payload: AddFamilyMemberRequest) {
+  return apiFetch<FamilyDto>(`/families/${familyId}/members`, { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export function removeFamilyMember(familyId: string, memberUserId: string, requestingUserId: string) {
+  return apiFetch<void>(
+    `/families/${familyId}/members/${memberUserId}?requestingUserId=${encodeURIComponent(requestingUserId)}`,
+    { method: 'DELETE' },
+  );
+}
+
+export function deleteFamily(familyId: string, userId: string) {
+  return apiFetch<void>(`/families/${familyId}?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' });
+}
+
+export function listSharedAccounts(familyId: string, userId: string) {
+  return apiFetch<SharedAccountDto[]>(`/families/${familyId}/shared-accounts?userId=${encodeURIComponent(userId)}`);
 }

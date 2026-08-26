@@ -25,6 +25,9 @@ export interface AccountDto {
   currency: string;
   currentBalance: string;
   isActive: boolean;
+  // false par défaut : jamais visible aux autres membres de la famille sans action
+  // explicite du propriétaire (règle non négociable, cf. domaine Families).
+  isSharedWithFamily: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -42,6 +45,7 @@ export interface CreateAccountRequest {
 export interface UpdateAccountRequest {
   name?: string;
   isActive?: boolean;
+  isSharedWithFamily?: boolean;
 }
 
 export interface AccountBalanceResponse {

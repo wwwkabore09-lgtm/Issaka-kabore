@@ -17,6 +17,9 @@ describe('AccountsService', () => {
       create: jest.Mock;
       aggregate: jest.Mock;
     };
+    familyMember: {
+      findUnique: jest.Mock;
+    };
   };
 
   const userId = '11111111-1111-1111-1111-111111111111';
@@ -31,6 +34,7 @@ describe('AccountsService', () => {
     currency: 'XOF',
     currentBalance: new Prisma.Decimal('15000.00'),
     isActive: true,
+    isSharedWithFamily: false,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
   };
@@ -47,6 +51,9 @@ describe('AccountsService', () => {
       accountBalanceEntry: {
         create: jest.fn(),
         aggregate: jest.fn(),
+      },
+      familyMember: {
+        findUnique: jest.fn(),
       },
     };
 
@@ -139,6 +146,38 @@ describe('AccountsService', () => {
 
       expect(result.id).toBe(accountId);
       expect(result.currentBalance).toBe('15000.00');
+    });
+  });
+
+  describe('update — partage familial', () => {
+    beforeEach(() => {
+      prisma.account.findUnique.mockResolvedValue(baseAccount);
+    });
+
+    it("rejette isSharedWithFamily=true quand l'utilisateur n'appartient à aucune famille", async () => {
+      prisma.familyMember.findUnique.mockResolvedValue(null);
+
+      await expect(service.update(accountId, userId, { isSharedWithFamily: true })).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect(prisma.account.update).not.toHaveBeenCalled();
+    });
+
+    it("autorise isSharedWithFamily=true quand l'utilisateur appartient à une famille", async () => {
+      prisma.familyMember.findUnique.mockResolvedValue({ userId, familyId: 'fam-1' });
+      prisma.account.update.mockResolvedValue({ ...baseAccount, isSharedWithFamily: true });
+
+      const result = await service.update(accountId, userId, { isSharedWithFamily: true });
+
+      expect(result.isSharedWithFamily).toBe(true);
+    });
+
+    it('ne vérifie pas l\'appartenance familiale pour les autres mises à jour', async () => {
+      prisma.account.update.mockResolvedValue({ ...baseAccount, name: 'Renommé' });
+
+      await service.update(accountId, userId, { name: 'Renommé' });
+
+      expect(prisma.familyMember.findUnique).not.toHaveBeenCalled();
     });
   });
 
