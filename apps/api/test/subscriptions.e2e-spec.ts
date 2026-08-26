@@ -3,11 +3,13 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { authHeader, registerTestUser } from './utils/auth';
 
 describe('SubscriptionsController (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let userId: string;
+  let accessToken: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -20,10 +22,12 @@ describe('SubscriptionsController (e2e)', () => {
 
     prisma = app.get(PrismaService);
 
-    const user = await prisma.user.create({
-      data: { email: `subscriptions-e2e-${Date.now()}@finza.test`, fullName: 'Test User' },
+    const user = await registerTestUser(app, {
+      email: `subscriptions-e2e-${Date.now()}@finza.test`,
+      fullName: 'Test User',
     });
-    userId = user.id;
+    userId = user.userId;
+    accessToken = user.accessToken;
   });
 
   afterAll(async () => {
@@ -32,11 +36,19 @@ describe('SubscriptionsController (e2e)', () => {
     await app.close();
   });
 
+  it('rejette les requêtes sans access token', async () => {
+    await request(app.getHttpServer()).get('/subscriptions').expect(401);
+    await request(app.getHttpServer())
+      .post('/subscriptions')
+      .send({ name: 'Sans token', amount: '1000', billingFrequency: 'monthly', nextBillingDate: '2026-07-01T00:00:00.000Z' })
+      .expect(401);
+  });
+
   it('crée un abonnement mensuel et le retrouve dans la liste', async () => {
     const createRes = await request(app.getHttpServer())
       .post('/subscriptions')
+      .set(...authHeader(accessToken))
       .send({
-        userId,
         name: 'Netflix',
         amount: '6000',
         billingFrequency: 'monthly',
@@ -48,7 +60,7 @@ describe('SubscriptionsController (e2e)', () => {
 
     const listRes = await request(app.getHttpServer())
       .get('/subscriptions')
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .expect(200);
 
     expect(listRes.body.some((s: { id: string }) => s.id === createRes.body.id)).toBe(true);
@@ -57,8 +69,8 @@ describe('SubscriptionsController (e2e)', () => {
   it('agrège le coût mensuel récurrent total, y compris pour un abonnement annuel', async () => {
     await request(app.getHttpServer())
       .post('/subscriptions')
+      .set(...authHeader(accessToken))
       .send({
-        userId,
         name: 'Assurance moto',
         amount: '120000',
         billingFrequency: 'yearly',
@@ -68,7 +80,7 @@ describe('SubscriptionsController (e2e)', () => {
 
     const summary = await request(app.getHttpServer())
       .get('/subscriptions/summary')
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .expect(200);
 
     // Netflix (6000/mois) + Assurance (120000/12 = 10000/mois) = 16000
@@ -79,8 +91,8 @@ describe('SubscriptionsController (e2e)', () => {
   it("exclut un abonnement désactivé du résumé", async () => {
     const createRes = await request(app.getHttpServer())
       .post('/subscriptions')
+      .set(...authHeader(accessToken))
       .send({
-        userId,
         name: 'Salle de sport',
         amount: '15000',
         billingFrequency: 'monthly',
@@ -88,21 +100,28 @@ describe('SubscriptionsController (e2e)', () => {
       })
       .expect(201);
 
-    const beforeSummary = await request(app.getHttpServer()).get('/subscriptions/summary').query({ userId }).expect(200);
+    const beforeSummary = await request(app.getHttpServer())
+      .get('/subscriptions/summary')
+      .set(...authHeader(accessToken))
+      .expect(200);
 
     await request(app.getHttpServer())
       .patch(`/subscriptions/${createRes.body.id}`)
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .send({ isActive: false })
       .expect(200);
 
-    const afterSummary = await request(app.getHttpServer()).get('/subscriptions/summary').query({ userId }).expect(200);
+    const afterSummary = await request(app.getHttpServer())
+      .get('/subscriptions/summary')
+      .set(...authHeader(accessToken))
+      .expect(200);
 
     expect(Number(afterSummary.body.totalMonthlyRecurring)).toBe(Number(beforeSummary.body.totalMonthlyRecurring) - 15000);
 
     const activeOnlyList = await request(app.getHttpServer())
       .get('/subscriptions')
-      .query({ userId, activeOnly: 'true' })
+      .set(...authHeader(accessToken))
+      .query({ activeOnly: 'true' })
       .expect(200);
     expect(activeOnlyList.body.some((s: { id: string }) => s.id === createRes.body.id)).toBe(false);
   });
@@ -110,8 +129,8 @@ describe('SubscriptionsController (e2e)', () => {
   it('renouvelle un abonnement en avançant sa prochaine échéance d\'un cycle', async () => {
     const createRes = await request(app.getHttpServer())
       .post('/subscriptions')
+      .set(...authHeader(accessToken))
       .send({
-        userId,
         name: 'Forfait mobile',
         amount: '5000',
         billingFrequency: 'monthly',
@@ -121,7 +140,7 @@ describe('SubscriptionsController (e2e)', () => {
 
     const renewRes = await request(app.getHttpServer())
       .post(`/subscriptions/${createRes.body.id}/renew`)
-      .send({ userId })
+      .set(...authHeader(accessToken))
       .expect(201);
 
     expect(renewRes.body.nextBillingDate).toBe('2026-07-10T00:00:00.000Z');
@@ -137,8 +156,8 @@ describe('SubscriptionsController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/subscriptions')
+      .set(...authHeader(accessToken))
       .send({
-        userId,
         accountId: otherAccount.id,
         name: 'Test',
         amount: '1000',
@@ -154,8 +173,8 @@ describe('SubscriptionsController (e2e)', () => {
   it('supprime un abonnement', async () => {
     const createRes = await request(app.getHttpServer())
       .post('/subscriptions')
+      .set(...authHeader(accessToken))
       .send({
-        userId,
         name: 'À supprimer',
         amount: '1000',
         billingFrequency: 'monthly',
@@ -165,12 +184,12 @@ describe('SubscriptionsController (e2e)', () => {
 
     await request(app.getHttpServer())
       .delete(`/subscriptions/${createRes.body.id}`)
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .expect(204);
 
     await request(app.getHttpServer())
       .get(`/subscriptions/${createRes.body.id}`)
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .expect(404);
   });
 });

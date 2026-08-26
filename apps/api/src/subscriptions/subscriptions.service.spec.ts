@@ -159,7 +159,7 @@ describe('SubscriptionsService', () => {
   describe('create', () => {
     it('rejette un montant à zéro', async () => {
       await expect(
-        service.create({ userId, name: 'Test', amount: '0', billingFrequency: 'monthly', nextBillingDate: '2026-07-01T00:00:00.000Z' }),
+        service.create(userId, { name: 'Test', amount: '0', billingFrequency: 'monthly', nextBillingDate: '2026-07-01T00:00:00.000Z' }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -167,8 +167,7 @@ describe('SubscriptionsService', () => {
       prisma.category.findUnique.mockResolvedValue({ id: 'cat', userId: null, kind: 'income' });
 
       await expect(
-        service.create({
-          userId,
+        service.create(userId, {
           name: 'Test',
           amount: '1000',
           billingFrequency: 'monthly',

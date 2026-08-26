@@ -52,23 +52,23 @@ export class SubscriptionsService {
     private readonly accountsService: AccountsService,
   ) {}
 
-  async create(dto: CreateSubscriptionDto): Promise<SubscriptionDto> {
+  async create(userId: string, dto: CreateSubscriptionDto): Promise<SubscriptionDto> {
     const amount = new Prisma.Decimal(dto.amount);
     if (amount.lte(0)) {
       throw new BadRequestException('amount doit être strictement positif');
     }
 
     if (dto.accountId) {
-      await this.accountsService.getOwnedAccountOrThrow(dto.accountId, dto.userId);
+      await this.accountsService.getOwnedAccountOrThrow(dto.accountId, userId);
     }
 
     if (dto.categoryId) {
-      await this.getOwnedExpenseCategoryOrThrow(dto.categoryId, dto.userId);
+      await this.getOwnedExpenseCategoryOrThrow(dto.categoryId, userId);
     }
 
     const subscription = await this.prisma.subscription.create({
       data: {
-        userId: dto.userId,
+        userId,
         accountId: dto.accountId,
         categoryId: dto.categoryId,
         name: dto.name,

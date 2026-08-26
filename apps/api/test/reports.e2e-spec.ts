@@ -80,8 +80,8 @@ describe('ReportsController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/subscriptions')
+      .set(...authHeader(accessToken))
       .send({
-        userId,
         name: 'Abonnement rapport',
         amount: '5000',
         billingFrequency: 'monthly',

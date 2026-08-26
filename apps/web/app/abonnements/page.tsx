@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { BillingFrequency, SubscriptionDto, SubscriptionsSummaryDto } from '@finza/shared-types';
 import { BILLING_FREQUENCIES } from '@finza/shared-types';
 import { cn } from '@finza/ui';
@@ -13,8 +14,7 @@ import {
   renewSubscription,
   updateSubscription,
 } from '@/lib/api';
-
-const USER_ID_STORAGE_KEY = 'finza_demo_user_id';
+import { getStoredAccessToken } from '@/lib/auth-session';
 
 const BILLING_FREQUENCY_LABELS: Record<BillingFrequency, string> = {
   weekly: 'Hebdomadaire',
@@ -34,7 +34,8 @@ function formatDaysUntil(days: number) {
 }
 
 export default function AbonnementsPage() {
-  const [userId, setUserId] = useState('');
+  const router = useRouter();
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [subscriptions, setSubscriptions] = useState<SubscriptionDto[]>([]);
   const [summary, setSummary] = useState<SubscriptionsSummaryDto | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,22 +48,29 @@ export default function AbonnementsPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(USER_ID_STORAGE_KEY);
-    if (stored) setUserId(stored);
-  }, []);
+    const stored = getStoredAccessToken();
+    if (!stored) {
+      router.replace('/connexion');
+      return;
+    }
+    setAccessToken(stored);
+  }, [router]);
 
   useEffect(() => {
-    if (!userId) return;
-    window.localStorage.setItem(USER_ID_STORAGE_KEY, userId);
+    if (!accessToken) return;
     void refreshAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [accessToken]);
 
   async function refreshAll() {
+    if (!accessToken) return;
     setLoading(true);
     setError(null);
     try {
-      const [subsRes, summaryRes] = await Promise.all([listSubscriptions(userId), getSubscriptionsSummary(userId)]);
+      const [subsRes, summaryRes] = await Promise.all([
+        listSubscriptions(accessToken),
+        getSubscriptionsSummary(accessToken),
+      ]);
       setSubscriptions(subsRes);
       setSummary(summaryRes);
     } catch (err) {
@@ -74,11 +82,11 @@ export default function AbonnementsPage() {
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault();
+    if (!accessToken) return;
     setSubmitting(true);
     setError(null);
     try {
-      await createSubscription({
-        userId,
+      await createSubscription(accessToken, {
         name,
         amount,
         billingFrequency,
@@ -96,9 +104,10 @@ export default function AbonnementsPage() {
   }
 
   async function handleRenew(id: string) {
+    if (!accessToken) return;
     setError(null);
     try {
-      await renewSubscription(id, userId);
+      await renewSubscription(id, accessToken);
       await refreshAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
@@ -106,9 +115,10 @@ export default function AbonnementsPage() {
   }
 
   async function handleToggleActive(subscription: SubscriptionDto) {
+    if (!accessToken) return;
     setError(null);
     try {
-      await updateSubscription(subscription.id, userId, { isActive: !subscription.isActive });
+      await updateSubscription(subscription.id, accessToken, { isActive: !subscription.isActive });
       await refreshAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
@@ -116,13 +126,22 @@ export default function AbonnementsPage() {
   }
 
   async function handleDelete(id: string) {
+    if (!accessToken) return;
     setError(null);
     try {
-      await deleteSubscription(id, userId);
+      await deleteSubscription(id, accessToken);
       await refreshAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     }
+  }
+
+  if (!accessToken) {
+    return (
+      <main className="mx-auto max-w-2xl p-8">
+        <p className="text-sm text-muted-foreground">Redirection vers la connexion…</p>
+      </main>
+    );
   }
 
   return (
@@ -133,19 +152,6 @@ export default function AbonnementsPage() {
         </Link>
         <h1 className="text-2xl font-semibold">Abonnements</h1>
         <p className="text-sm text-muted-foreground">Paiements récurrents, ramenés à un coût mensuel comparable.</p>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label htmlFor="userId" className="text-sm font-medium">
-          Identifiant utilisateur
-        </label>
-        <input
-          id="userId"
-          value={userId}
-          onChange={(event) => setUserId(event.target.value.trim())}
-          placeholder="uuid — via npm run prisma:seed --workspace=apps/api"
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-        />
       </div>
 
       {error && (
@@ -161,65 +167,63 @@ export default function AbonnementsPage() {
         </div>
       )}
 
-      {userId && (
-        <form onSubmit={handleCreate} className="flex flex-col gap-3 rounded-lg border border-border p-4">
-          <h2 className="font-medium">Nouvel abonnement</h2>
+      <form onSubmit={handleCreate} className="flex flex-col gap-3 rounded-lg border border-border p-4">
+        <h2 className="font-medium">Nouvel abonnement</h2>
 
+        <input
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Nom (ex: Netflix)"
+          required
+          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+        />
+
+        <div className="grid grid-cols-2 gap-3">
           <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Nom (ex: Netflix)"
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            placeholder="Montant par cycle"
+            inputMode="decimal"
             required
             className="rounded-md border border-input bg-background px-3 py-2 text-sm"
           />
-
-          <div className="grid grid-cols-2 gap-3">
-            <input
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              placeholder="Montant par cycle"
-              inputMode="decimal"
-              required
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-            />
-            <select
-              value={billingFrequency}
-              onChange={(event) => setBillingFrequency(event.target.value as BillingFrequency)}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-            >
-              {BILLING_FREQUENCIES.map((value) => (
-                <option key={value} value={value}>
-                  {BILLING_FREQUENCY_LABELS[value]}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <input
-            type="date"
-            value={nextBillingDate}
-            onChange={(event) => setNextBillingDate(event.target.value)}
-            required
+          <select
+            value={billingFrequency}
+            onChange={(event) => setBillingFrequency(event.target.value as BillingFrequency)}
             className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-          />
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className={cn(
-              'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
-              submitting && 'opacity-60',
-            )}
           >
-            {submitting ? 'Création…' : 'Ajouter'}
-          </button>
-        </form>
-      )}
+            {BILLING_FREQUENCIES.map((value) => (
+              <option key={value} value={value}>
+                {BILLING_FREQUENCY_LABELS[value]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <input
+          type="date"
+          value={nextBillingDate}
+          onChange={(event) => setNextBillingDate(event.target.value)}
+          required
+          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+        />
+
+        <button
+          type="submit"
+          disabled={submitting}
+          className={cn(
+            'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
+            submitting && 'opacity-60',
+          )}
+        >
+          {submitting ? 'Création…' : 'Ajouter'}
+        </button>
+      </form>
 
       <div className="flex flex-col gap-2">
         <h2 className="font-medium">Vos abonnements {loading && '(chargement…)'}</h2>
 
-        {userId && !loading && subscriptions.length === 0 && (
+        {!loading && subscriptions.length === 0 && (
           <p className="text-sm text-muted-foreground">Aucun abonnement pour le moment.</p>
         )}
 
