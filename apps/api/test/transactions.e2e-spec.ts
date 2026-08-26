@@ -41,11 +41,11 @@ describe('TransactionsController (e2e)', () => {
       request(app.getHttpServer())
         .post('/accounts')
         .set(...authHeader(accessToken))
-        .send({ name: 'Compte A', type: 'orange_money', currency: 'XOF', openingBalance: '100000' }),
+        .send({ name: 'Compte A', category: 'salaire', currency: 'XOF', openingBalance: '100000' }),
       request(app.getHttpServer())
         .post('/accounts')
         .set(...authHeader(accessToken))
-        .send({ name: 'Compte B', type: 'bank_account', currency: 'XOF' }),
+        .send({ name: 'Compte B', category: 'commerce', currency: 'XOF' }),
     ]);
     accountAId = accountA.body.id;
     accountBId = accountB.body.id;
@@ -158,7 +158,7 @@ describe('TransactionsController (e2e)', () => {
       data: { email: `transactions-e2e-other-${Date.now()}@finza.test`, fullName: 'Autre utilisateur' },
     });
     const otherAccount = await prisma.account.create({
-      data: { userId: otherUser.id, name: 'Compte externe', type: 'cash', currency: 'XOF' },
+      data: { userId: otherUser.id, name: 'Compte externe', category: 'autre', currency: 'XOF' },
     });
 
     await request(app.getHttpServer())

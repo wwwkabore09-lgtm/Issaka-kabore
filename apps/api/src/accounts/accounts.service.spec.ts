@@ -28,8 +28,9 @@ describe('AccountsService', () => {
   const baseAccount = {
     id: accountId,
     userId,
-    name: 'Orange Money',
-    type: 'orange_money',
+    name: 'Salaire',
+    category: 'salaire',
+    frequency: 'monthly',
     ownership: 'personal',
     currency: 'XOF',
     currentBalance: new Prisma.Decimal('15000.00'),
@@ -65,8 +66,8 @@ describe('AccountsService', () => {
       prisma.account.create.mockResolvedValue(baseAccount);
 
       const result = await service.create(userId, {
-        name: 'Orange Money',
-        type: 'orange_money',
+        name: 'Salaire',
+        category: 'salaire',
         currency: 'XOF',
         openingBalance: '15000',
         openingBalanceDate: '2026-01-01T00:00:00.000Z',
@@ -99,8 +100,8 @@ describe('AccountsService', () => {
       });
 
       const result = await service.create(userId, {
-        name: 'Espèces',
-        type: 'cash',
+        name: 'Argent de poche',
+        category: 'argent_de_poche',
         currency: 'XOF',
       });
 
@@ -112,8 +113,8 @@ describe('AccountsService', () => {
 
       await expect(
         service.create(userId, {
-          name: 'Orange Money',
-          type: 'orange_money',
+          name: 'Salaire',
+          category: 'salaire',
           currency: 'XOF',
           openingBalanceDate: future,
         }),

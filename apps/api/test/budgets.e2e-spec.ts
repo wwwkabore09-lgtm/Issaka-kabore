@@ -40,7 +40,7 @@ describe('BudgetsController (e2e)', () => {
     const accountRes = await request(app.getHttpServer())
       .post('/accounts')
       .set(...authHeader(accessToken))
-      .send({ name: 'Compte budget', type: 'cash', currency: 'XOF', openingBalance: '200000' });
+      .send({ name: 'Compte budget', category: 'autre', currency: 'XOF', openingBalance: '200000' });
     accountId = accountRes.body.id;
   });
 
@@ -119,7 +119,7 @@ describe('BudgetsController (e2e)', () => {
     const created = await request(app.getHttpServer())
       .post('/accounts')
       .set(...authHeader(accessToken))
-      .send({ name: 'Autre compte', type: 'cash', currency: 'XOF' });
+      .send({ name: 'Autre compte', category: 'autre', currency: 'XOF' });
     const otherAccountId = created.body.id;
 
     const budgetRes = await request(app.getHttpServer())
@@ -153,7 +153,7 @@ describe('BudgetsController (e2e)', () => {
       data: { email: `budgets-e2e-other-${Date.now()}@finza.test`, fullName: 'Autre utilisateur' },
     });
     const otherAccount = await prisma.account.create({
-      data: { userId: otherUser.id, name: 'Compte externe', type: 'cash', currency: 'XOF' },
+      data: { userId: otherUser.id, name: 'Compte externe', category: 'autre', currency: 'XOF' },
     });
     const otherCategory = await prisma.category.create({
       data: { userId: otherUser.id, key: 'transport-other', label: 'Transport', kind: 'expense' },

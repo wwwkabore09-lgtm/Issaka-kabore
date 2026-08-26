@@ -26,6 +26,7 @@ import type {
   LoginRequest,
   RegisterRequest,
   ReportDto,
+  RevenueOverviewDto,
   SharedAccountDto,
   SubscriptionDto,
   SubscriptionsSummaryDto,
@@ -147,6 +148,14 @@ export function getAccountBalance(id: string, accessToken: string, asOf?: string
   const query = new URLSearchParams(asOf ? { asOf } : {});
   const suffix = query.toString() ? `?${query.toString()}` : '';
   return apiFetch<AccountBalanceResponse>(`/accounts/${id}/balance${suffix}`, { headers: authHeaders(accessToken) });
+}
+
+export function deleteAccount(id: string, accessToken: string) {
+  return apiFetch<void>(`/accounts/${id}`, { method: 'DELETE', headers: authHeaders(accessToken) });
+}
+
+export function getRevenueOverview(accessToken: string) {
+  return apiFetch<RevenueOverviewDto>('/transactions/revenue-overview', { headers: authHeaders(accessToken) });
 }
 
 export function listCategories(userId: string) {

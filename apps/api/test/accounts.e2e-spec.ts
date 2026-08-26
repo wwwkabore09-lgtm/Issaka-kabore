@@ -36,7 +36,7 @@ describe('AccountsController (e2e)', () => {
     await request(app.getHttpServer()).get('/accounts').expect(401);
     await request(app.getHttpServer())
       .post('/accounts')
-      .send({ name: 'Compte test', type: 'cash', currency: 'XOF' })
+      .send({ name: 'Compte test', category: 'autre', currency: 'XOF' })
       .expect(401);
   });
 
@@ -45,8 +45,8 @@ describe('AccountsController (e2e)', () => {
       .post('/accounts')
       .set(...authHeader(accessToken))
       .send({
-        name: 'Orange Money',
-        type: 'orange_money',
+        name: 'Salaire',
+        category: 'salaire',
         currency: 'XOF',
         openingBalance: '25000',
       })
@@ -54,8 +54,9 @@ describe('AccountsController (e2e)', () => {
 
     expect(createRes.body).toMatchObject({
       userId,
-      name: 'Orange Money',
-      type: 'orange_money',
+      name: 'Salaire',
+      category: 'salaire',
+      frequency: 'monthly',
       ownership: 'personal',
       currency: 'XOF',
       currentBalance: '25000.00',
@@ -75,15 +76,15 @@ describe('AccountsController (e2e)', () => {
     await request(app.getHttpServer())
       .post('/accounts')
       .set(...authHeader(accessToken))
-      .send({ name: 'Compte test', type: 'cash', currency: 'USD' })
+      .send({ name: 'Compte test', category: 'autre', currency: 'USD' })
       .expect(400);
   });
 
-  it('rejette un type de compte inconnu', async () => {
+  it('rejette une catégorie de revenu inconnue', async () => {
     await request(app.getHttpServer())
       .post('/accounts')
       .set(...authHeader(accessToken))
-      .send({ name: 'Compte test', type: 'paypal', currency: 'XOF' })
+      .send({ name: 'Compte test', category: 'paypal', currency: 'XOF' })
       .expect(400);
   });
 
@@ -92,8 +93,8 @@ describe('AccountsController (e2e)', () => {
       .post('/accounts')
       .set(...authHeader(accessToken))
       .send({
-        name: 'Espèces',
-        type: 'cash',
+        name: 'Argent de poche',
+        category: 'argent_de_poche',
         currency: 'XOF',
         openingBalance: '5000',
         openingBalanceDate: '2026-01-01T00:00:00.000Z',
@@ -118,7 +119,7 @@ describe('AccountsController (e2e)', () => {
     const createRes = await request(app.getHttpServer())
       .post('/accounts')
       .set(...authHeader(other.accessToken))
-      .send({ name: 'Compte privé', type: 'cash', currency: 'XOF' })
+      .send({ name: 'Compte privé', category: 'autre', currency: 'XOF' })
       .expect(201);
 
     await request(app.getHttpServer())
@@ -129,21 +130,39 @@ describe('AccountsController (e2e)', () => {
     await prisma.user.delete({ where: { id: other.userId } });
   });
 
-  it('permet de renommer et désactiver un compte, mais pas de changer son type', async () => {
+  it('permet de renommer, recatégoriser et désactiver un compte', async () => {
     const createRes = await request(app.getHttpServer())
       .post('/accounts')
       .set(...authHeader(accessToken))
-      .send({ name: 'Wave', type: 'wave', currency: 'XOF' })
+      .send({ name: 'Freelance', category: 'freelance', currency: 'XOF' })
       .expect(201);
 
     const patchRes = await request(app.getHttpServer())
       .patch(`/accounts/${createRes.body.id}`)
       .set(...authHeader(accessToken))
-      .send({ name: 'Wave (renommé)', isActive: false })
+      .send({ name: 'Freelance (renommé)', category: 'activite_professionnelle', isActive: false })
       .expect(200);
 
-    expect(patchRes.body.name).toBe('Wave (renommé)');
+    expect(patchRes.body.name).toBe('Freelance (renommé)');
     expect(patchRes.body.isActive).toBe(false);
-    expect(patchRes.body.type).toBe('wave');
+    expect(patchRes.body.category).toBe('activite_professionnelle');
+  });
+
+  it('supprime définitivement un compte sans historique, mais refuse si des transactions existent', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post('/accounts')
+      .set(...authHeader(accessToken))
+      .send({ name: 'À supprimer', category: 'autre', currency: 'XOF', openingBalance: '1000' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .delete(`/accounts/${createRes.body.id}`)
+      .set(...authHeader(accessToken))
+      .expect(204);
+
+    await request(app.getHttpServer())
+      .get(`/accounts/${createRes.body.id}`)
+      .set(...authHeader(accessToken))
+      .expect(404);
   });
 });

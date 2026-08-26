@@ -103,7 +103,7 @@ describe('FamiliesController (e2e)', () => {
     const accountRes = await request(app.getHttpServer())
       .post('/accounts')
       .set(...authHeader(ownerToken))
-      .send({ name: 'Compte perso propriétaire', type: 'cash', currency: 'XOF', openingBalance: '50000' })
+      .send({ name: 'Compte perso propriétaire', category: 'autre', currency: 'XOF', openingBalance: '50000' })
       .expect(201);
     expect(accountRes.body.isSharedWithFamily).toBe(false);
 
@@ -140,7 +140,7 @@ describe('FamiliesController (e2e)', () => {
     const accountRes = await request(app.getHttpServer())
       .post('/accounts')
       .set(...authHeader(outsiderToken))
-      .send({ name: 'Compte externe', type: 'cash', currency: 'XOF' })
+      .send({ name: 'Compte externe', category: 'autre', currency: 'XOF' })
       .expect(201);
 
     await request(app.getHttpServer())

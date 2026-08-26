@@ -1,14 +1,22 @@
-export const ACCOUNT_TYPES = [
-  'orange_money',
-  'moov_money',
-  'mtn_money',
-  'wave',
-  'bank_account',
-  'bank_card',
-  'cash',
+// Un "compte" est une source d'argent suivie MANUELLEMENT par l'utilisateur (ex: "Salaire",
+// "Commerce", "Argent de poche") — jamais une connexion à Orange Money, Moov Money, MTN
+// Mobile Money, Wave ou une banque. category/frequency ne sont que des métadonnées
+// descriptives choisies par l'utilisateur lui-même.
+export const REVENUE_CATEGORIES = [
+  'salaire',
+  'activite_professionnelle',
+  'commerce',
+  'freelance',
+  'argent_de_poche',
+  'revenu_secondaire',
+  'autre',
 ] as const;
 
-export type AccountType = (typeof ACCOUNT_TYPES)[number];
+export type RevenueCategory = (typeof REVENUE_CATEGORIES)[number];
+
+export const REVENUE_FREQUENCIES = ['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'variable'] as const;
+
+export type RevenueFrequency = (typeof REVENUE_FREQUENCIES)[number];
 
 export const ACCOUNT_OWNERSHIPS = ['personal', 'professional'] as const;
 
@@ -20,7 +28,8 @@ export interface AccountDto {
   id: string;
   userId: string;
   name: string;
-  type: AccountType;
+  category: RevenueCategory;
+  frequency: RevenueFrequency;
   ownership: AccountOwnership;
   currency: string;
   currentBalance: string;
@@ -34,7 +43,8 @@ export interface AccountDto {
 
 export interface CreateAccountRequest {
   name: string;
-  type: AccountType;
+  category: RevenueCategory;
+  frequency?: RevenueFrequency;
   ownership?: AccountOwnership;
   currency: string;
   openingBalance?: string;
@@ -43,6 +53,8 @@ export interface CreateAccountRequest {
 
 export interface UpdateAccountRequest {
   name?: string;
+  category?: RevenueCategory;
+  frequency?: RevenueFrequency;
   isActive?: boolean;
   isSharedWithFamily?: boolean;
 }

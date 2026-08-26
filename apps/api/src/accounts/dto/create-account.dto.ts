@@ -1,4 +1,11 @@
-import { ACCOUNT_OWNERSHIPS, ACCOUNT_TYPES, type AccountOwnership, type AccountType } from '@finza/shared-types';
+import {
+  ACCOUNT_OWNERSHIPS,
+  REVENUE_CATEGORIES,
+  REVENUE_FREQUENCIES,
+  type AccountOwnership,
+  type RevenueCategory,
+  type RevenueFrequency,
+} from '@finza/shared-types';
 import { CURRENCIES } from '@finza/config';
 import { IsIn, IsISO8601, IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
 
@@ -9,8 +16,12 @@ export class CreateAccountDto {
   @IsNotEmpty()
   name!: string;
 
-  @IsIn(ACCOUNT_TYPES)
-  type!: AccountType;
+  @IsIn(REVENUE_CATEGORIES)
+  category!: RevenueCategory;
+
+  @IsOptional()
+  @IsIn(REVENUE_FREQUENCIES)
+  frequency?: RevenueFrequency;
 
   @IsOptional()
   @IsIn(ACCOUNT_OWNERSHIPS)

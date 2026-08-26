@@ -3,18 +3,40 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ACCOUNT_OWNERSHIPS, ACCOUNT_TYPES, type AccountDto, type AccountOwnership, type AccountType } from '@finza/shared-types';
-import { COUNTRIES, CURRENCIES, LAUNCH_COUNTRY, type CurrencyCode } from '@finza/config';
+import {
+  ACCOUNT_OWNERSHIPS,
+  REVENUE_CATEGORIES,
+  REVENUE_FREQUENCIES,
+  type AccountDto,
+  type AccountOwnership,
+  type RevenueCategory,
+  type RevenueFrequency,
+  type RevenueOverviewDto,
+} from '@finza/shared-types';
+import { COUNTRIES, CURRENCIES, LAUNCH_COUNTRY } from '@finza/config';
 import { cn } from '@finza/ui';
-import { createAccount, listAccounts, logout as apiLogout, updateAccount } from '@/lib/api';
-import { ACCOUNT_TYPE_LABELS } from '@/lib/account-labels';
+import {
+  createAccount,
+  deleteAccount,
+  getRevenueOverview,
+  listAccounts,
+  logout as apiLogout,
+  updateAccount,
+} from '@/lib/api';
+import { REVENUE_CATEGORY_LABELS, REVENUE_FREQUENCY_LABELS } from '@/lib/account-labels';
 import { clearSession, getStoredAccessToken, getStoredRefreshToken, getStoredUserEmail } from '@/lib/auth-session';
 
 const DEFAULT_CURRENCY = COUNTRIES[LAUNCH_COUNTRY].currency;
 
-function formatBalance(value: string, currency: string) {
+function formatAmount(value: string, currency: string) {
   const symbol = CURRENCIES[currency as keyof typeof CURRENCIES]?.symbol ?? currency;
   return `${Number(value).toLocaleString('fr-FR')} ${symbol}`;
+}
+
+function formatEvolution(value: string | null) {
+  if (value === null) return '—';
+  const n = Number(value);
+  return `${n > 0 ? '+' : ''}${n.toLocaleString('fr-FR')} %`;
 }
 
 export default function ComptesPage() {
@@ -22,14 +44,17 @@ export default function ComptesPage() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
+  const [overview, setOverview] = useState<RevenueOverviewDto | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
-  const [type, setType] = useState<AccountType>('orange_money');
+  const [category, setCategory] = useState<RevenueCategory>('salaire');
+  const [frequency, setFrequency] = useState<RevenueFrequency>('monthly');
   const [ownership, setOwnership] = useState<AccountOwnership>('personal');
-  const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
-  const [openingBalance, setOpeningBalance] = useState('');
+  const [amount, setAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -55,14 +80,16 @@ export default function ComptesPage() {
 
   useEffect(() => {
     if (!accessToken) return;
-    void refreshAccounts(accessToken);
+    void refreshAll(accessToken);
   }, [accessToken]);
 
-  async function refreshAccounts(token: string) {
+  async function refreshAll(token: string) {
     setLoading(true);
     setError(null);
     try {
-      setAccounts(await listAccounts(token));
+      const [accountsRes, overviewRes] = await Promise.all([listAccounts(token), getRevenueOverview(token)]);
+      setAccounts(accountsRes);
+      setOverview(overviewRes);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
@@ -70,23 +97,47 @@ export default function ComptesPage() {
     }
   }
 
-  async function handleCreate(event: React.FormEvent) {
+  function resetForm() {
+    setName('');
+    setCategory('salaire');
+    setFrequency('monthly');
+    setOwnership('personal');
+    setAmount('');
+    setEditingId(null);
+    setShowForm(false);
+  }
+
+  function startEdit(account: AccountDto) {
+    setEditingId(account.id);
+    setName(account.name);
+    setCategory(account.category);
+    setFrequency(account.frequency);
+    setOwnership(account.ownership);
+    setAmount('');
+    setShowForm(true);
+  }
+
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!accessToken) return;
 
     setSubmitting(true);
     setError(null);
     try {
-      await createAccount(accessToken, {
-        name,
-        type,
-        ownership,
-        currency,
-        openingBalance: openingBalance || undefined,
-      });
-      setName('');
-      setOpeningBalance('');
-      await refreshAccounts(accessToken);
+      if (editingId) {
+        await updateAccount(editingId, accessToken, { name, category, frequency });
+      } else {
+        await createAccount(accessToken, {
+          name,
+          category,
+          frequency,
+          ownership,
+          currency: DEFAULT_CURRENCY,
+          openingBalance: amount || undefined,
+        });
+      }
+      resetForm();
+      await refreshAll(accessToken);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
@@ -99,7 +150,18 @@ export default function ComptesPage() {
     setError(null);
     try {
       await updateAccount(account.id, accessToken, { isActive: !account.isActive });
-      await refreshAccounts(accessToken);
+      await refreshAll(accessToken);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+    }
+  }
+
+  async function handleDelete(account: AccountDto) {
+    if (!accessToken) return;
+    setError(null);
+    try {
+      await deleteAccount(account.id, accessToken);
+      await refreshAll(accessToken);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     }
@@ -137,7 +199,7 @@ export default function ComptesPage() {
           </div>
         </div>
         <p className="text-sm text-muted-foreground">
-          Mobile Money, comptes bancaires et espèces, personnels ou professionnels.
+          Vos revenus, saisis et suivis manuellement — aucune connexion à un service financier externe.
         </p>
       </div>
 
@@ -156,108 +218,172 @@ export default function ComptesPage() {
         </p>
       )}
 
-      <form onSubmit={handleCreate} className="flex flex-col gap-3 rounded-lg border border-border p-4">
-        <h2 className="font-medium">Ajouter un compte</h2>
-
-        <input
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="Nom (ex: Orange Money principal)"
-          required
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-        />
-
-        <div className="grid grid-cols-2 gap-3">
-          <select
-            value={type}
-            onChange={(event) => setType(event.target.value as AccountType)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-          >
-            {ACCOUNT_TYPES.map((value) => (
-              <option key={value} value={value}>
-                {ACCOUNT_TYPE_LABELS[value]}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={currency}
-            onChange={(event) => setCurrency(event.target.value as CurrencyCode)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-          >
-            {Object.values(CURRENCIES).map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.label} ({c.code})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex items-center gap-4 text-sm">
-          {ACCOUNT_OWNERSHIPS.map((value) => (
-            <label key={value} className="flex items-center gap-1.5">
-              <input
-                type="radio"
-                name="ownership"
-                checked={ownership === value}
-                onChange={() => setOwnership(value)}
-              />
-              {value === 'personal' ? 'Personnel' : 'Professionnel'}
-            </label>
+      {overview && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {([
+            ['Aujourd’hui', overview.today],
+            ['Cette semaine', overview.thisWeek],
+            ['Ce mois', overview.thisMonth],
+            ['Cette année', overview.thisYear],
+            ['Total', overview.allTime],
+            ['Moyenne mensuelle', overview.averageMonthly],
+          ] as const).map(([label, value]) => (
+            <div key={label} className="rounded-lg border border-border p-3 text-center">
+              <p className="text-xs text-muted-foreground">{label}</p>
+              <p className="font-medium">{formatAmount(value, DEFAULT_CURRENCY)}</p>
+            </div>
           ))}
+          <div className="rounded-lg border border-border p-3 text-center">
+            <p className="text-xs text-muted-foreground">Évolution vs mois dernier</p>
+            <p
+              className={cn(
+                'font-medium',
+                overview.evolutionVsPreviousMonth !== null &&
+                  (Number(overview.evolutionVsPreviousMonth) >= 0 ? 'text-primary' : 'text-destructive'),
+              )}
+            >
+              {formatEvolution(overview.evolutionVsPreviousMonth)}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-medium">Mes revenus</h2>
+          {!showForm && (
+            <button type="button" onClick={() => setShowForm(true)} className="text-xs text-primary underline">
+              + Ajouter un revenu
+            </button>
+          )}
         </div>
 
-        <input
-          value={openingBalance}
-          onChange={(event) => setOpeningBalance(event.target.value)}
-          placeholder="Solde d'ouverture (optionnel, défaut 0)"
-          inputMode="decimal"
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-        />
+        {showForm && (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg border border-border p-4">
+            <h3 className="font-medium">{editingId ? 'Modifier ce revenu' : 'Nouveau revenu'}</h3>
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className={cn(
-            'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
-            submitting && 'opacity-60',
-          )}
-        >
-          {submitting ? 'Création…' : 'Créer le compte'}
-        </button>
-      </form>
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Nom (ex: Mon activité)"
+              required
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+            />
 
-      <div className="flex flex-col gap-2">
-        <h2 className="font-medium">Vos comptes {loading && '(chargement…)'}</h2>
+            {!editingId && (
+              <input
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                placeholder="Montant (optionnel, ex: 150000)"
+                inputMode="decimal"
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <select
+                value={category}
+                onChange={(event) => setCategory(event.target.value as RevenueCategory)}
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                {REVENUE_CATEGORIES.map((value) => (
+                  <option key={value} value={value}>
+                    {REVENUE_CATEGORY_LABELS[value]}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={frequency}
+                onChange={(event) => setFrequency(event.target.value as RevenueFrequency)}
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                {REVENUE_FREQUENCIES.map((value) => (
+                  <option key={value} value={value}>
+                    {REVENUE_FREQUENCY_LABELS[value]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {!editingId && (
+              <div className="flex items-center gap-4 text-sm">
+                {ACCOUNT_OWNERSHIPS.map((value) => (
+                  <label key={value} className="flex items-center gap-1.5">
+                    <input
+                      type="radio"
+                      name="ownership"
+                      checked={ownership === value}
+                      onChange={() => setOwnership(value)}
+                    />
+                    {value === 'personal' ? 'Personnel' : 'Professionnel'}
+                  </label>
+                ))}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={submitting}
+                className={cn(
+                  'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
+                  submitting && 'opacity-60',
+                )}
+              >
+                {submitting ? 'Enregistrement…' : editingId ? 'Enregistrer' : 'Ajouter'}
+              </button>
+              <button
+                type="button"
+                onClick={resetForm}
+                className="rounded-md border border-border px-4 py-2 text-sm font-medium text-muted-foreground"
+              >
+                Annuler
+              </button>
+            </div>
+          </form>
+        )}
 
         {!loading && accounts.length === 0 && (
-          <p className="text-sm text-muted-foreground">Aucun compte pour le moment.</p>
+          <p className="text-sm text-muted-foreground">Aucun revenu pour le moment.</p>
         )}
 
         <ul className="flex flex-col gap-2">
           {accounts.map((account) => (
             <li
               key={account.id}
-              className={cn(
-                'flex items-center justify-between rounded-lg border border-border p-3',
-                !account.isActive && 'opacity-50',
-              )}
+              className={cn('rounded-lg border border-border p-3', !account.isActive && 'opacity-50')}
             >
-              <Link href={`/comptes/${account.id}`} className="hover:underline">
-                <p className="font-medium">{account.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {ACCOUNT_TYPE_LABELS[account.type]} · {account.ownership === 'personal' ? 'Personnel' : 'Professionnel'}
-                </p>
-              </Link>
-              <div className="flex items-center gap-3">
-                <span className="font-medium">{formatBalance(account.currentBalance, account.currency)}</span>
+              <div className="flex items-center justify-between">
+                <Link href={`/comptes/${account.id}`} className="hover:underline">
+                  <p className="font-medium">{account.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {REVENUE_CATEGORY_LABELS[account.category]} · {REVENUE_FREQUENCY_LABELS[account.frequency]}
+                  </p>
+                </Link>
+                <span className="font-medium">{formatAmount(account.currentBalance, account.currency)}</span>
+              </div>
+              <div className="mt-2 flex items-center gap-3 text-xs">
+                <button type="button" onClick={() => startEdit(account)} className="text-muted-foreground underline">
+                  Modifier
+                </button>
                 <button
                   type="button"
                   onClick={() => handleToggleActive(account)}
-                  className="text-xs text-muted-foreground underline"
+                  className="text-muted-foreground underline"
                 >
                   {account.isActive ? 'Désactiver' : 'Réactiver'}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(account)}
+                  className="text-destructive underline"
+                >
+                  Supprimer
+                </button>
+                <Link href={`/comptes/${account.id}`} className="text-muted-foreground underline">
+                  Historique →
+                </Link>
               </div>
             </li>
           ))}

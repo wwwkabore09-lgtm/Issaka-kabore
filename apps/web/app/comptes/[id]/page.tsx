@@ -26,7 +26,7 @@ import {
   listTransactions,
   updateAccount,
 } from '@/lib/api';
-import { ACCOUNT_TYPE_LABELS } from '@/lib/account-labels';
+import { REVENUE_CATEGORY_LABELS, REVENUE_FREQUENCY_LABELS } from '@/lib/account-labels';
 import { getStoredAccessToken, getStoredUserId } from '@/lib/auth-session';
 
 const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
@@ -213,7 +213,8 @@ export default function CompteDetailPage() {
         <h1 className="text-2xl font-semibold">{account?.name ?? '…'}</h1>
         {account && (
           <p className="text-sm text-muted-foreground">
-            {ACCOUNT_TYPE_LABELS[account.type]} · {account.ownership === 'personal' ? 'Personnel' : 'Professionnel'} ·{' '}
+            {REVENUE_CATEGORY_LABELS[account.category]} · {REVENUE_FREQUENCY_LABELS[account.frequency]} ·{' '}
+            {account.ownership === 'personal' ? 'Personnel' : 'Professionnel'} ·{' '}
             {formatAmount(account.currentBalance, account.currency)}
           </p>
         )}

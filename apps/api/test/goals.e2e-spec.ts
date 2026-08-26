@@ -30,7 +30,7 @@ describe('GoalsController (e2e)', () => {
     const accountRes = await request(app.getHttpServer())
       .post('/accounts')
       .set(...authHeader(accessToken))
-      .send({ name: 'Compte épargne', type: 'cash', currency: 'XOF' });
+      .send({ name: 'Compte épargne', category: 'autre', currency: 'XOF' });
     accountId = accountRes.body.id;
   });
 
@@ -100,7 +100,7 @@ describe('GoalsController (e2e)', () => {
       data: { email: `goals-e2e-other-${Date.now()}@finza.test`, fullName: 'Autre utilisateur' },
     });
     const otherAccount = await prisma.account.create({
-      data: { userId: otherUser.id, name: 'Compte externe', type: 'cash', currency: 'XOF' },
+      data: { userId: otherUser.id, name: 'Compte externe', category: 'autre', currency: 'XOF' },
     });
 
     await request(app.getHttpServer())

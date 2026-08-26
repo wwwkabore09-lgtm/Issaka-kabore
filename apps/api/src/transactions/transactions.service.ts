@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { TransactionDto, TransactionSummaryDto, TransactionUserSummaryDto } from '@finza/shared-types';
+import type { RevenueOverviewDto, TransactionDto, TransactionSummaryDto, TransactionUserSummaryDto } from '@finza/shared-types';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccountsService } from '../accounts/accounts.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
@@ -168,6 +168,83 @@ export class TransactionsService {
       totalExpense: totalExpense.toFixed(2),
       netFlow: totalIncome.sub(totalExpense).toFixed(2),
     };
+  }
+
+  // Vue d'ensemble des revenus saisis manuellement par l'utilisateur, tous comptes confondus.
+  // Compte à la fois les transactions de type income ET le solde d'ouverture d'une source
+  // (le "Montant" saisi à la création d'un revenu manuel) : les deux sont des revenus
+  // déclarés par l'utilisateur lui-même, jamais une donnée récupérée d'un tiers.
+  async getRevenueOverview(userId: string): Promise<RevenueOverviewDto> {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(startOfToday);
+    const daysSinceMonday = (startOfToday.getDay() + 6) % 7;
+    startOfWeek.setDate(startOfWeek.getDate() - daysSinceMonday);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfPreviousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const epoch = new Date(0);
+
+    const [today, thisWeek, thisMonth, previousMonth, thisYear, allTime, earliestTx, earliestOpening] =
+      await Promise.all([
+        this.sumRevenue(userId, startOfToday, now),
+        this.sumRevenue(userId, startOfWeek, now),
+        this.sumRevenue(userId, startOfMonth, now),
+        this.sumRevenue(userId, startOfPreviousMonth, startOfMonth),
+        this.sumRevenue(userId, startOfYear, now),
+        this.sumRevenue(userId, epoch, now),
+        this.prisma.transaction.findFirst({
+          where: { type: 'income', account: { userId } },
+          orderBy: { occurredAt: 'asc' },
+        }),
+        this.prisma.accountBalanceEntry.findFirst({
+          where: { source: 'opening', amount: { gt: 0 }, account: { userId } },
+          orderBy: { effectiveAt: 'asc' },
+        }),
+      ]);
+
+    const earliestDate = [earliestTx?.occurredAt, earliestOpening?.effectiveAt]
+      .filter((d): d is Date => d !== undefined)
+      .sort((a, b) => a.getTime() - b.getTime())[0];
+    const monthsSinceFirstEntry = earliestDate
+      ? Math.max(
+          1,
+          (now.getFullYear() - earliestDate.getFullYear()) * 12 + (now.getMonth() - earliestDate.getMonth()) + 1,
+        )
+      : 1;
+    const averageMonthly = allTime.div(monthsSinceFirstEntry);
+
+    const evolutionVsPreviousMonth = previousMonth.gt(0)
+      ? thisMonth.sub(previousMonth).div(previousMonth).mul(100).toFixed(1)
+      : null;
+
+    return {
+      userId,
+      today: today.toFixed(2),
+      thisWeek: thisWeek.toFixed(2),
+      thisMonth: thisMonth.toFixed(2),
+      thisYear: thisYear.toFixed(2),
+      allTime: allTime.toFixed(2),
+      averageMonthly: averageMonthly.toFixed(2),
+      evolutionVsPreviousMonth,
+      generatedAt: now.toISOString(),
+    };
+  }
+
+  private async sumRevenue(userId: string, from: Date, to: Date): Promise<Prisma.Decimal> {
+    const [incomeTx, openingEntries] = await Promise.all([
+      this.prisma.transaction.aggregate({
+        where: { type: 'income', account: { userId }, occurredAt: { gte: from, lt: to } },
+        _sum: { amount: true },
+      }),
+      this.prisma.accountBalanceEntry.aggregate({
+        where: { source: 'opening', amount: { gt: 0 }, effectiveAt: { gte: from, lt: to }, account: { userId } },
+        _sum: { amount: true },
+      }),
+    ]);
+    const income = incomeTx._sum.amount ?? new Prisma.Decimal(0);
+    const opening = openingEntries._sum.amount ?? new Prisma.Decimal(0);
+    return income.add(opening);
   }
 
   private async appendLedgerEntry(

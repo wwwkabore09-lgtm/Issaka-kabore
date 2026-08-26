@@ -151,7 +151,7 @@ describe('SubscriptionsController (e2e)', () => {
       data: { email: `subscriptions-e2e-other-${Date.now()}@finza.test`, fullName: 'Autre utilisateur' },
     });
     const otherAccount = await prisma.account.create({
-      data: { userId: otherUser.id, name: 'Compte externe', type: 'cash', currency: 'XOF' },
+      data: { userId: otherUser.id, name: 'Compte externe', category: 'autre', currency: 'XOF' },
     });
 
     await request(app.getHttpServer())

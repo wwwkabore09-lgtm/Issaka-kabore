@@ -25,4 +25,9 @@ export class TransactionsController {
   getSummary(@CurrentUser() userId: string, @Query() query: GetSummaryQueryDto) {
     return this.transactionsService.getSummary(query.accountId, userId, query.from, query.to);
   }
+
+  @Get('revenue-overview')
+  getRevenueOverview(@CurrentUser() userId: string) {
+    return this.transactionsService.getRevenueOverview(userId);
+  }
 }

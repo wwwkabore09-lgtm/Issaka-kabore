@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { getStoredAccessToken } from '@/lib/auth-session';
 
 const DOMAINS = [
-  { title: 'Comptes', description: 'Mobile Money, comptes bancaires et espèces, réunis au même endroit.' },
+  { title: 'Comptes', description: 'Vos sources de revenus, saisies et suivies manuellement — salaire, commerce, freelance…' },
   { title: 'Budgets', description: 'Un plafond par catégorie, suivi en temps réel sur vos dépenses.' },
   { title: "Objectifs d'épargne", description: 'Des cibles claires, des contributions qui font avancer la barre.' },
   { title: 'Dettes et créances', description: "Ce que vous devez, et ce qu'on vous doit — sans le perdre de vue." },
@@ -35,11 +35,12 @@ export default function HomePage() {
           Lancement au Burkina Faso
         </span>
         <h1 className="text-balance text-4xl font-semibold tracking-tight">
-          Le Financial OS pensé pour vos réalités : Mobile Money, famille, imprévus.
+          Le Financial OS pensé pour vos réalités : revenus, famille, imprévus.
         </h1>
         <p className="max-w-xl text-muted-foreground">
-          Orange Money, Wave, comptes bancaires et espèces réunis au même endroit. Budgets,
-          objectifs d&apos;épargne, dettes et abonnements suivis sans effort — seul ou en famille.
+          Saisissez vous-même vos revenus et vos dépenses — aucune connexion à un compte
+          externe. Budgets, objectifs d&apos;épargne, dettes et abonnements suivis sans effort
+          — seul ou en famille.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Link
@@ -67,8 +68,8 @@ export default function HomePage() {
       </section>
 
       <p className="text-center text-xs text-muted-foreground">
-        Vos identifiants Mobile Money et bancaires ne sont jamais demandés — Finza suit vos
-        finances, il ne s&apos;y connecte pas.
+        Finza ne se connecte à aucun compte Mobile Money ou bancaire, et ne demande jamais vos
+        identifiants — vous saisissez vous-même vos revenus et dépenses, Finza les organise.
       </p>
     </main>
   );

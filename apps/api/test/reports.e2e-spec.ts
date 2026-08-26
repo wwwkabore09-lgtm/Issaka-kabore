@@ -39,7 +39,7 @@ describe('ReportsController (e2e)', () => {
     const accountRes = await request(app.getHttpServer())
       .post('/accounts')
       .set(...authHeader(accessToken))
-      .send({ name: 'Compte rapport', type: 'cash', currency: 'XOF', openingBalance: '10000' });
+      .send({ name: 'Compte rapport', category: 'autre', currency: 'XOF', openingBalance: '10000' });
     accountId = accountRes.body.id;
 
     await request(app.getHttpServer())

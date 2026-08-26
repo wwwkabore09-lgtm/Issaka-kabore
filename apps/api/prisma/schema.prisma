@@ -39,14 +39,29 @@ model User {
   @@map("users")
 }
 
-enum AccountType {
-  orange_money
-  moov_money
-  mtn_money
-  wave
-  bank_account
-  bank_card
-  cash
+// Catégorise une source de revenus/dépenses gérée manuellement par l'utilisateur.
+// Jamais un fournisseur externe (Mobile Money, banque) : uniquement une classification
+// informative choisie par l'utilisateur lui-même.
+enum RevenueCategory {
+  salaire
+  activite_professionnelle
+  commerce
+  freelance
+  argent_de_poche
+  revenu_secondaire
+  autre
+}
+
+// À quelle cadence l'utilisateur s'attend à recevoir/saisir cette source de revenus.
+// Purement descriptif : n'affecte jamais le calcul du solde (toujours reconstruit
+// depuis AccountBalanceEntry), seulement l'affichage et les statistiques.
+enum RevenueFrequency {
+  daily
+  weekly
+  monthly
+  quarterly
+  yearly
+  variable
 }
 
 // Un compte professionnel reste un compte comme un autre : c'est cette valeur qui le
@@ -63,12 +78,17 @@ enum BalanceEntrySource {
   transaction
 }
 
+// Une source d'argent suivie MANUELLEMENT par l'utilisateur (ex: "Salaire", "Commerce",
+// "Argent de poche") — jamais connectée à un fournisseur externe (Mobile Money, banque).
+// category/frequency ne sont que des métadonnées descriptives choisies par l'utilisateur ;
+// le solde reste toujours reconstruit depuis AccountBalanceEntry, jamais depuis un tiers.
 model Account {
   id        String   @id @default(uuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
-  type      AccountType
+  category  RevenueCategory
+  frequency RevenueFrequency @default(monthly)
   ownership AccountOwnership @default(personal)
 
   // Code devise ISO (XOF, ...), validé côté service contre packages/config, jamais codé en dur ici.

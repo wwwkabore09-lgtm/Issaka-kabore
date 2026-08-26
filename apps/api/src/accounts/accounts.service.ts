@@ -22,7 +22,8 @@ export class AccountsService {
         data: {
           userId,
           name: dto.name,
-          type: dto.type,
+          category: dto.category,
+          frequency: dto.frequency ?? 'monthly',
           ownership: dto.ownership ?? 'personal',
           currency: dto.currency,
           currentBalance: openingBalance,
@@ -104,6 +105,26 @@ export class AccountsService {
     return this.findAccountOrThrow(id, userId);
   }
 
+  // Suppression définitive uniquement si la source n'a encore aucun historique (aucune
+  // transaction, aucun budget) : au-delà, on perdrait des écritures du grand livre append-only.
+  // Dans ce cas, l'appelant doit désactiver la source (isActive: false) plutôt que la supprimer.
+  async remove(id: string, userId: string): Promise<void> {
+    await this.findAccountOrThrow(id, userId);
+
+    const [transactionCount, budgetCount] = await Promise.all([
+      this.prisma.transaction.count({ where: { OR: [{ accountId: id }, { transferToAccountId: id }] } }),
+      this.prisma.budget.count({ where: { accountId: id } }),
+    ]);
+
+    if (transactionCount > 0 || budgetCount > 0) {
+      throw new BadRequestException(
+        'Impossible de supprimer une source avec un historique : désactivez-la plutôt (isActive: false).',
+      );
+    }
+
+    await this.prisma.account.delete({ where: { id } });
+  }
+
   private async findAccountOrThrow(id: string, userId: string) {
     const account = await this.prisma.account.findUnique({ where: { id } });
 
@@ -124,7 +145,8 @@ export class AccountsService {
     id: string;
     userId: string;
     name: string;
-    type: string;
+    category: string;
+    frequency: string;
     ownership: string;
     currency: string;
     currentBalance: Prisma.Decimal;
@@ -137,7 +159,8 @@ export class AccountsService {
       id: account.id,
       userId: account.userId,
       name: account.name,
-      type: account.type as AccountDto['type'],
+      category: account.category as AccountDto['category'],
+      frequency: account.frequency as AccountDto['frequency'],
       ownership: account.ownership as AccountDto['ownership'],
       currency: account.currency,
       currentBalance: account.currentBalance.toFixed(2),
