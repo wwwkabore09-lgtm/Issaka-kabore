@@ -33,7 +33,7 @@ export class ReportsService {
   // Construit un instantané en composant les domaines déjà en place, plutôt qu'en
   // recalculant leur logique : chaque chiffre vient de la même règle de calcul que sur sa
   // propre page (ex: les transferts restent exclus du cash-flow, via TransactionsService).
-  async generate(dto: GenerateReportDto): Promise<ReportDto> {
+  async generate(userId: string, dto: GenerateReportDto): Promise<ReportDto> {
     const now = new Date();
     const periodStart = dto.from ? new Date(dto.from) : startOfMonth(now);
     const periodEnd = dto.to ? new Date(dto.to) : endOfMonth(now);
@@ -42,18 +42,18 @@ export class ReportsService {
       throw new BadRequestException('from doit être antérieur ou égal à to');
     }
 
-    const accounts = await this.accountsService.findAllForUser(dto.userId);
+    const accounts = await this.accountsService.findAllForUser(userId);
 
     const [cashFlow, budgetsByAccount, goals, debts, subscriptions] = await Promise.all([
-      this.transactionsService.getUserSummary(dto.userId, periodStart.toISOString(), periodEnd.toISOString()),
+      this.transactionsService.getUserSummary(userId, periodStart.toISOString(), periodEnd.toISOString()),
       Promise.all(
         accounts.map((account) =>
-          this.budgetsService.findAllWithProgress(account.id, dto.userId, periodStart.toISOString(), periodEnd.toISOString()),
+          this.budgetsService.findAllWithProgress(account.id, userId, periodStart.toISOString(), periodEnd.toISOString()),
         ),
       ),
-      this.goalsService.findAllForUser(dto.userId),
-      this.debtsService.findAllForUser(dto.userId),
-      this.subscriptionsService.getSummary(dto.userId),
+      this.goalsService.findAllForUser(userId),
+      this.debtsService.findAllForUser(userId),
+      this.subscriptionsService.getSummary(userId),
     ]);
 
     const snapshot: ReportSnapshot = {
@@ -69,7 +69,7 @@ export class ReportsService {
 
     const report = await this.prisma.report.create({
       data: {
-        userId: dto.userId,
+        userId,
         title,
         periodStart,
         periodEnd,

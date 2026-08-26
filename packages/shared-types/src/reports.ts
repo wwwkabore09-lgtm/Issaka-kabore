@@ -28,8 +28,6 @@ export interface ReportDto {
 }
 
 export interface GenerateReportRequest {
-  // Temporaire : tant que le domaine auth n'existe pas (cf. domaine Accounts).
-  userId: string;
   title?: string;
   // Par défaut : le mois courant.
   from?: string;

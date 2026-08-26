@@ -1,10 +1,6 @@
-import { IsISO8601, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { IsISO8601, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class GenerateReportDto {
-  // Temporaire : tant que le domaine auth n'existe pas (cf. domaine Accounts).
-  @IsUUID()
-  userId!: string;
-
   @IsOptional()
   @IsString()
   @MaxLength(120)

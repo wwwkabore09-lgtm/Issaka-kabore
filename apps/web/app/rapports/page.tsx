@@ -2,18 +2,19 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { ReportDto } from '@finza/shared-types';
 import { cn } from '@finza/ui';
 import { deleteReport, generateReport, listReports } from '@/lib/api';
-
-const USER_ID_STORAGE_KEY = 'finza_demo_user_id';
+import { getStoredAccessToken } from '@/lib/auth-session';
 
 function formatXof(value: string) {
   return `${Number(value).toLocaleString('fr-FR')} FCFA`;
 }
 
 export default function RapportsPage() {
-  const [userId, setUserId] = useState('');
+  const router = useRouter();
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [reports, setReports] = useState<ReportDto[]>([]);
   const [title, setTitle] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -22,22 +23,26 @@ export default function RapportsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(USER_ID_STORAGE_KEY);
-    if (stored) setUserId(stored);
-  }, []);
+    const stored = getStoredAccessToken();
+    if (!stored) {
+      router.replace('/connexion');
+      return;
+    }
+    setAccessToken(stored);
+  }, [router]);
 
   useEffect(() => {
-    if (!userId) return;
-    window.localStorage.setItem(USER_ID_STORAGE_KEY, userId);
+    if (!accessToken) return;
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [accessToken]);
 
   async function refresh() {
+    if (!accessToken) return;
     setLoading(true);
     setError(null);
     try {
-      setReports(await listReports(userId));
+      setReports(await listReports(accessToken));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
@@ -47,10 +52,11 @@ export default function RapportsPage() {
 
   async function handleGenerate(event: React.FormEvent) {
     event.preventDefault();
+    if (!accessToken) return;
     setGenerating(true);
     setError(null);
     try {
-      const report = await generateReport({ userId, title: title || undefined });
+      const report = await generateReport(accessToken, { title: title || undefined });
       setTitle('');
       setExpandedId(report.id);
       await refresh();
@@ -62,14 +68,23 @@ export default function RapportsPage() {
   }
 
   async function handleDelete(id: string) {
+    if (!accessToken) return;
     setError(null);
     try {
-      await deleteReport(id, userId);
+      await deleteReport(id, accessToken);
       if (expandedId === id) setExpandedId(null);
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     }
+  }
+
+  if (!accessToken) {
+    return (
+      <main className="mx-auto max-w-2xl p-8">
+        <p className="text-sm text-muted-foreground">Redirection vers la connexion…</p>
+      </main>
+    );
   }
 
   return (
@@ -84,53 +99,38 @@ export default function RapportsPage() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor="userId" className="text-sm font-medium">
-          Identifiant utilisateur
-        </label>
-        <input
-          id="userId"
-          value={userId}
-          onChange={(event) => setUserId(event.target.value.trim())}
-          placeholder="uuid — via npm run prisma:seed --workspace=apps/api"
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-        />
-      </div>
-
       {error && (
         <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {error}
         </p>
       )}
 
-      {userId && (
-        <form onSubmit={handleGenerate} className="flex flex-col gap-3 rounded-lg border border-border p-4">
-          <h2 className="font-medium">Générer un rapport (mois courant)</h2>
-          <div className="flex gap-2">
-            <input
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="Titre (optionnel)"
-              className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
-            />
-            <button
-              type="submit"
-              disabled={generating}
-              className={cn(
-                'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
-                generating && 'opacity-60',
-              )}
-            >
-              {generating ? 'Génération…' : 'Générer'}
-            </button>
-          </div>
-        </form>
-      )}
+      <form onSubmit={handleGenerate} className="flex flex-col gap-3 rounded-lg border border-border p-4">
+        <h2 className="font-medium">Générer un rapport (mois courant)</h2>
+        <div className="flex gap-2">
+          <input
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="Titre (optionnel)"
+            className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+          />
+          <button
+            type="submit"
+            disabled={generating}
+            className={cn(
+              'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
+              generating && 'opacity-60',
+            )}
+          >
+            {generating ? 'Génération…' : 'Générer'}
+          </button>
+        </div>
+      </form>
 
       <div className="flex flex-col gap-3">
         <h2 className="font-medium">Historique {loading && '(chargement…)'}</h2>
 
-        {userId && !loading && reports.length === 0 && (
+        {!loading && reports.length === 0 && (
           <p className="text-sm text-muted-foreground">Aucun rapport généré pour le moment.</p>
         )}
 

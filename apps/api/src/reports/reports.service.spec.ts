@@ -69,8 +69,7 @@ describe('ReportsService', () => {
         }),
       );
 
-      const result = await service.generate({
-        userId,
+      const result = await service.generate(userId, {
         from: '2026-06-01T00:00:00.000Z',
         to: '2026-06-30T23:59:59.999Z',
       });
@@ -96,7 +95,7 @@ describe('ReportsService', () => {
         Promise.resolve({ id: reportId, ...data, generatedAt: new Date() }),
       );
 
-      const result = await service.generate({ userId, from: '2026-06-01T00:00:00.000Z', to: '2026-06-30T00:00:00.000Z' });
+      const result = await service.generate(userId, { from: '2026-06-01T00:00:00.000Z', to: '2026-06-30T00:00:00.000Z' });
 
       expect(result.title).toContain('2026-06-01');
       expect(result.title).toContain('2026-06-30');
@@ -107,8 +106,7 @@ describe('ReportsService', () => {
         Promise.resolve({ id: reportId, ...data, generatedAt: new Date() }),
       );
 
-      const result = await service.generate({
-        userId,
+      const result = await service.generate(userId, {
         title: 'Mon rapport perso',
         from: '2026-06-01T00:00:00.000Z',
         to: '2026-06-30T00:00:00.000Z',
@@ -119,7 +117,7 @@ describe('ReportsService', () => {
 
     it('rejette une période où from est après to', async () => {
       await expect(
-        service.generate({ userId, from: '2026-06-30T00:00:00.000Z', to: '2026-06-01T00:00:00.000Z' }),
+        service.generate(userId, { from: '2026-06-30T00:00:00.000Z', to: '2026-06-01T00:00:00.000Z' }),
       ).rejects.toBeInstanceOf(BadRequestException);
 
       expect(prisma.report.create).not.toHaveBeenCalled();
@@ -131,7 +129,7 @@ describe('ReportsService', () => {
         Promise.resolve({ id: reportId, ...data, generatedAt: new Date() }),
       );
 
-      const result = await service.generate({ userId });
+      const result = await service.generate(userId, {});
 
       expect(budgetsService.findAllWithProgress).not.toHaveBeenCalled();
       expect(result.snapshot.accounts).toEqual([]);

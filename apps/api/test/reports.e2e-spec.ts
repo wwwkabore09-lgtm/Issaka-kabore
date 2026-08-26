@@ -105,6 +105,11 @@ describe('ReportsController (e2e)', () => {
     await app.close();
   });
 
+  it('rejette les requêtes sans access token', async () => {
+    await request(app.getHttpServer()).get('/reports').expect(401);
+    await request(app.getHttpServer()).post('/reports/generate').send({}).expect(401);
+  });
+
   it('génère un rapport qui agrège tous les domaines pour la période courante', async () => {
     const now = new Date();
     const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
@@ -112,7 +117,8 @@ describe('ReportsController (e2e)', () => {
 
     const res = await request(app.getHttpServer())
       .post('/reports/generate')
-      .send({ userId, from, to })
+      .set(...authHeader(accessToken))
+      .send({ from, to })
       .expect(201);
 
     expect(res.body.snapshot.accounts).toHaveLength(1);
@@ -135,13 +141,15 @@ describe('ReportsController (e2e)', () => {
   it('utilise un titre personnalisé quand fourni, sinon un titre par défaut basé sur la période', async () => {
     const withTitle = await request(app.getHttpServer())
       .post('/reports/generate')
-      .send({ userId, title: 'Rapport perso' })
+      .set(...authHeader(accessToken))
+      .send({ title: 'Rapport perso' })
       .expect(201);
     expect(withTitle.body.title).toBe('Rapport perso');
 
     const withoutTitle = await request(app.getHttpServer())
       .post('/reports/generate')
-      .send({ userId })
+      .set(...authHeader(accessToken))
+      .send({})
       .expect(201);
     expect(withoutTitle.body.title).toMatch(/^Rapport du \d{4}-\d{2}-\d{2} au \d{4}-\d{2}-\d{2}$/);
   });
@@ -149,37 +157,53 @@ describe('ReportsController (e2e)', () => {
   it('rejette une période invalide (from après to)', async () => {
     await request(app.getHttpServer())
       .post('/reports/generate')
-      .send({ userId, from: '2026-06-30T00:00:00.000Z', to: '2026-06-01T00:00:00.000Z' })
+      .set(...authHeader(accessToken))
+      .send({ from: '2026-06-30T00:00:00.000Z', to: '2026-06-01T00:00:00.000Z' })
       .expect(400);
   });
 
   it('liste les rapports générés, puis en supprime un', async () => {
     const genRes = await request(app.getHttpServer())
       .post('/reports/generate')
-      .send({ userId, title: 'À supprimer' })
+      .set(...authHeader(accessToken))
+      .send({ title: 'À supprimer' })
       .expect(201);
 
-    const listRes = await request(app.getHttpServer()).get('/reports').query({ userId }).expect(200);
+    const listRes = await request(app.getHttpServer())
+      .get('/reports')
+      .set(...authHeader(accessToken))
+      .expect(200);
     expect(listRes.body.some((r: { id: string }) => r.id === genRes.body.id)).toBe(true);
 
-    await request(app.getHttpServer()).delete(`/reports/${genRes.body.id}`).query({ userId }).expect(204);
+    await request(app.getHttpServer())
+      .delete(`/reports/${genRes.body.id}`)
+      .set(...authHeader(accessToken))
+      .expect(204);
 
-    await request(app.getHttpServer()).get(`/reports/${genRes.body.id}`).query({ userId }).expect(404);
+    await request(app.getHttpServer())
+      .get(`/reports/${genRes.body.id}`)
+      .set(...authHeader(accessToken))
+      .expect(404);
   });
 
   it("renvoie 404 (jamais 403) pour le rapport d'un autre utilisateur", async () => {
-    const otherUser = await prisma.user.create({
-      data: { email: `reports-e2e-other-${Date.now()}@finza.test`, fullName: 'Autre utilisateur' },
+    const otherUser = await registerTestUser(app, {
+      email: `reports-e2e-other-${Date.now()}@finza.test`,
+      fullName: 'Autre utilisateur',
     });
 
     const genRes = await request(app.getHttpServer())
       .post('/reports/generate')
-      .send({ userId: otherUser.id })
+      .set(...authHeader(otherUser.accessToken))
+      .send({})
       .expect(201);
 
-    await request(app.getHttpServer()).get(`/reports/${genRes.body.id}`).query({ userId }).expect(404);
+    await request(app.getHttpServer())
+      .get(`/reports/${genRes.body.id}`)
+      .set(...authHeader(accessToken))
+      .expect(404);
 
     await prisma.report.delete({ where: { id: genRes.body.id } });
-    await prisma.user.delete({ where: { id: otherUser.id } });
+    await prisma.user.delete({ where: { id: otherUser.userId } });
   });
 });

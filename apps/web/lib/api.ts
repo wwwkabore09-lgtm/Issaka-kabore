@@ -253,16 +253,20 @@ export function deleteSubscription(id: string, accessToken: string) {
   return apiFetch<void>(`/subscriptions/${id}`, { method: 'DELETE', headers: authHeaders(accessToken) });
 }
 
-export function listReports(userId: string) {
-  return apiFetch<ReportDto[]>(`/reports?userId=${encodeURIComponent(userId)}`);
+export function listReports(accessToken: string) {
+  return apiFetch<ReportDto[]>('/reports', { headers: authHeaders(accessToken) });
 }
 
-export function generateReport(payload: GenerateReportRequest) {
-  return apiFetch<ReportDto>('/reports/generate', { method: 'POST', body: JSON.stringify(payload) });
+export function generateReport(accessToken: string, payload: GenerateReportRequest) {
+  return apiFetch<ReportDto>('/reports/generate', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    headers: authHeaders(accessToken),
+  });
 }
 
-export function deleteReport(id: string, userId: string) {
-  return apiFetch<void>(`/reports/${id}?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' });
+export function deleteReport(id: string, accessToken: string) {
+  return apiFetch<void>(`/reports/${id}`, { method: 'DELETE', headers: authHeaders(accessToken) });
 }
 
 export function listMyFamilies(userId: string) {

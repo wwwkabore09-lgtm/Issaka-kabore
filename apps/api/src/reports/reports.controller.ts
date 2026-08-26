@@ -1,30 +1,32 @@
-import { Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Body, Query } from '@nestjs/common';
+import { Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Post, Body, UseGuards } from '@nestjs/common';
 import { ReportsService } from './reports.service';
 import { GenerateReportDto } from './dto/generate-report.dto';
-import { OwnerQueryDto } from './dto/owner-query.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
 
 @Controller('reports')
+@UseGuards(JwtAuthGuard)
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
   @Post('generate')
-  generate(@Body() dto: GenerateReportDto) {
-    return this.reportsService.generate(dto);
+  generate(@CurrentUser() userId: string, @Body() dto: GenerateReportDto) {
+    return this.reportsService.generate(userId, dto);
   }
 
   @Get()
-  findAll(@Query() query: OwnerQueryDto) {
-    return this.reportsService.findAllForUser(query.userId);
+  findAll(@CurrentUser() userId: string) {
+    return this.reportsService.findAllForUser(userId);
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string, @Query() query: OwnerQueryDto) {
-    return this.reportsService.findOneForUser(id, query.userId);
+  findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() userId: string) {
+    return this.reportsService.findOneForUser(id, userId);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id', ParseUUIDPipe) id: string, @Query() query: OwnerQueryDto) {
-    await this.reportsService.remove(id, query.userId);
+  async remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() userId: string) {
+    await this.reportsService.remove(id, userId);
   }
 }
