@@ -1,4 +1,13 @@
-import type { AccountBalanceResponse, AccountDto, CreateAccountRequest, UpdateAccountRequest } from '@finza/shared-types';
+import type {
+  AccountBalanceResponse,
+  AccountDto,
+  CategoryDto,
+  CreateAccountRequest,
+  CreateTransactionRequest,
+  TransactionDto,
+  TransactionSummaryDto,
+  UpdateAccountRequest,
+} from '@finza/shared-types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -32,7 +41,29 @@ export function updateAccount(id: string, userId: string, payload: UpdateAccount
   });
 }
 
+export function getAccount(id: string, userId: string) {
+  return apiFetch<AccountDto>(`/accounts/${id}?userId=${encodeURIComponent(userId)}`);
+}
+
 export function getAccountBalance(id: string, userId: string, asOf?: string) {
   const query = new URLSearchParams({ userId, ...(asOf ? { asOf } : {}) });
   return apiFetch<AccountBalanceResponse>(`/accounts/${id}/balance?${query.toString()}`);
+}
+
+export function listCategories(userId: string) {
+  return apiFetch<CategoryDto[]>(`/categories?userId=${encodeURIComponent(userId)}`);
+}
+
+export function listTransactions(accountId: string, userId: string) {
+  const query = new URLSearchParams({ userId, accountId });
+  return apiFetch<TransactionDto[]>(`/transactions?${query.toString()}`);
+}
+
+export function createTransaction(payload: CreateTransactionRequest) {
+  return apiFetch<TransactionDto>('/transactions', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export function getTransactionSummary(accountId: string, userId: string, from: string, to: string) {
+  const query = new URLSearchParams({ userId, accountId, from, to });
+  return apiFetch<TransactionSummaryDto>(`/transactions/summary?${query.toString()}`);
 }

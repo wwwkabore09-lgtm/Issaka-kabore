@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ACCOUNT_OWNERSHIPS, ACCOUNT_TYPES, type AccountDto, type AccountOwnership, type AccountType } from '@finza/shared-types';
 import { COUNTRIES, CURRENCIES, LAUNCH_COUNTRY, type CurrencyCode } from '@finza/config';
@@ -212,12 +213,12 @@ export default function ComptesPage() {
                 !account.isActive && 'opacity-50',
               )}
             >
-              <div>
+              <Link href={`/comptes/${account.id}`} className="hover:underline">
                 <p className="font-medium">{account.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {ACCOUNT_TYPE_LABELS[account.type]} · {account.ownership === 'personal' ? 'Personnel' : 'Professionnel'}
                 </p>
-              </div>
+              </Link>
               <div className="flex items-center gap-3">
                 <span className="font-medium">{formatBalance(account.currentBalance, account.currency)}</span>
                 <button

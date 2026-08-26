@@ -88,6 +88,12 @@ export class AccountsService {
     };
   }
 
+  // Utilisable par d'autres domaines (ex: Transactions) qui ont besoin de vérifier
+  // qu'un compte existe et appartient à l'utilisateur, sans dupliquer cette logique.
+  async getOwnedAccountOrThrow(id: string, userId: string) {
+    return this.findAccountOrThrow(id, userId);
+  }
+
   private async findAccountOrThrow(id: string, userId: string) {
     const account = await this.prisma.account.findUnique({ where: { id } });
 

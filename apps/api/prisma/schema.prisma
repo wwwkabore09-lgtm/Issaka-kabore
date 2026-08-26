@@ -21,7 +21,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  accounts Account[]
+  accounts   Account[]
+  categories Category[]
 
   @@map("users")
 }
@@ -43,11 +44,11 @@ enum AccountOwnership {
   professional
 }
 
-// Source d'une écriture de solde. Une seule valeur pour l'instant : le solde d'ouverture
-// saisi à la création du compte. Le domaine Transactions (pas encore implémenté) ajoutera
-// sa propre valeur ("transaction") par une migration dédiée quand il sera construit.
+// Source d'une écriture de solde : solde d'ouverture saisi à la création du compte,
+// ou transaction enregistrée par le domaine Transactions.
 enum BalanceEntrySource {
   opening
+  transaction
 }
 
 model Account {
@@ -70,6 +71,8 @@ model Account {
   updatedAt DateTime @updatedAt
 
   balanceEntries AccountBalanceEntry[]
+  transactions   Transaction[]          @relation("SourceAccount")
+  transfersIn    Transaction[]          @relation("TransferDestinationAccount")
 
   @@index([userId])
   @@map("accounts")
@@ -88,4 +91,59 @@ model AccountBalanceEntry {
 
   @@index([accountId, effectiveAt])
   @@map("account_balance_entries")
+}
+
+enum CategoryKind {
+  income
+  expense
+}
+
+// userId null = catégorie système partagée (seedée depuis packages/config par pays).
+// userId renseigné = catégorie personnalisée par l'utilisateur.
+model Category {
+  id        String       @id @default(uuid())
+  userId    String?
+  user      User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key       String
+  label     String
+  kind      CategoryKind
+  createdAt DateTime     @default(now())
+
+  transactions Transaction[]
+
+  @@unique([userId, key])
+  @@map("categories")
+}
+
+enum TransactionType {
+  income
+  expense
+  transfer
+}
+
+model Transaction {
+  id        String          @id @default(uuid())
+  accountId String
+  account   Account         @relation("SourceAccount", fields: [accountId], references: [id], onDelete: Cascade)
+  type      TransactionType
+
+  // Toujours positif : le sens (+/-) sur le solde du compte dépend de `type`.
+  amount Decimal @db.Decimal(18, 2)
+
+  // Requis pour income/expense (kind doit correspondre à type), absent pour transfer.
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  // Requis uniquement pour type = transfer : compte de destination, doit appartenir
+  // au même utilisateur et à la même devise que `account`.
+  transferToAccountId String?
+  transferToAccount   Account? @relation("TransferDestinationAccount", fields: [transferToAccountId], references: [id])
+
+  description String?
+  occurredAt  DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([accountId, occurredAt])
+  @@map("transactions")
 }
