@@ -37,14 +37,70 @@ import type {
   UpdateGoalRequest,
   UpdateSubscriptionRequest,
 } from '@finza/shared-types';
+import { clearSession, getStoredRefreshToken, updateTokens } from './auth-session';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+function hasAuthHeader(init?: RequestInit): boolean {
+  return !!(init?.headers as Record<string, string> | undefined)?.Authorization;
+}
+
+// Dédoublonne les rafraîchissements concurrents : si plusieurs requêtes échouent en 401 en
+// même temps (ex: Promise.all), une seule vraie requête /auth/refresh part, les autres
+// attendent son résultat au lieu de faire chacune leur propre tentative.
+let refreshPromise: Promise<{ accessToken: string; refreshToken: string }> | null = null;
+
+async function refreshAccessToken(): Promise<{ accessToken: string; refreshToken: string }> {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      const refreshToken = getStoredRefreshToken();
+      if (!refreshToken) {
+        throw new Error('Aucun jeton de rafraîchissement disponible');
+      }
+      const res = await fetch(`${API_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+      if (!res.ok) {
+        throw new Error('Jeton de rafraîchissement invalide ou expiré');
+      }
+      return res.json() as Promise<{ accessToken: string; refreshToken: string }>;
+    })().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
+// L'access token JWT expire après 15 minutes (JWT_ACCESS_EXPIRES_IN) : sans ce rafraîchissement
+// silencieux, toute session active depuis plus de 15 minutes se ferait rejeter (401) sur son
+// prochain appel. Ne s'applique qu'aux requêtes authentifiées (Authorization présent) — jamais
+// à /auth/login, /auth/register, etc. `_retried` évite une boucle si le nouveau token échoue
+// aussi (ne devrait jamais arriver juste après un rafraîchissement réussi).
+async function apiFetch<T>(path: string, init?: RequestInit, _retried = false): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
     headers: { 'Content-Type': 'application/json', ...init?.headers },
   });
+
+  if (res.status === 401 && !_retried && hasAuthHeader(init)) {
+    try {
+      const tokens = await refreshAccessToken();
+      updateTokens(tokens);
+      return apiFetch<T>(
+        path,
+        { ...init, headers: { ...init?.headers, Authorization: `Bearer ${tokens.accessToken}` } },
+        true,
+      );
+    } catch {
+      clearSession();
+      if (typeof window !== 'undefined') {
+        window.location.href = '/connexion';
+      }
+      throw new Error('Session expirée, veuillez vous reconnecter.');
+    }
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => null);

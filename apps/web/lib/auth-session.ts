@@ -27,6 +27,13 @@ export function clearSession() {
   window.localStorage.removeItem(USER_ID_KEY);
 }
 
+// Remplace uniquement les jetons (après un rafraîchissement silencieux sur 401) — userId et
+// email n'ont pas changé, donc pas besoin d'une session complète comme saveSession().
+export function updateTokens(tokens: { accessToken: string; refreshToken: string }) {
+  window.localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
+  window.localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
+}
+
 export function getStoredRefreshToken(): string | null {
   return window.localStorage.getItem(REFRESH_TOKEN_KEY);
 }
