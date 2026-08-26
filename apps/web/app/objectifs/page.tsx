@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { AccountDto, GoalContributionDto, GoalProgressDto } from '@finza/shared-types';
 import { cn } from '@finza/ui';
 import {
@@ -14,14 +15,13 @@ import {
 } from '@/lib/api';
 import { getStoredAccessToken } from '@/lib/auth-session';
 
-const USER_ID_STORAGE_KEY = 'finza_demo_user_id';
-
 function formatXof(value: string) {
   return `${Number(value).toLocaleString('fr-FR')} FCFA`;
 }
 
 export default function ObjectifsPage() {
-  const [userId, setUserId] = useState('');
+  const router = useRouter();
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [goals, setGoals] = useState<GoalProgressDto[]>([]);
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -38,28 +38,26 @@ export default function ObjectifsPage() {
   const [contributions, setContributions] = useState<GoalContributionDto[]>([]);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(USER_ID_STORAGE_KEY);
-    if (stored) setUserId(stored);
-  }, []);
+    const stored = getStoredAccessToken();
+    if (!stored) {
+      router.replace('/connexion');
+      return;
+    }
+    setAccessToken(stored);
+  }, [router]);
 
   useEffect(() => {
-    if (!userId) return;
-    window.localStorage.setItem(USER_ID_STORAGE_KEY, userId);
+    if (!accessToken) return;
     void refreshAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [accessToken]);
 
   async function refreshAll() {
+    if (!accessToken) return;
     setLoading(true);
     setError(null);
     try {
-      const accessToken = getStoredAccessToken();
-      const [goalsRes, accountsRes] = await Promise.all([
-        listGoals(userId),
-        // Le domaine Comptes exige désormais un vrai token JWT ; sans session connectée,
-        // le sélecteur de compte reste simplement vide (les objectifs restent utilisables).
-        accessToken ? listAccounts(accessToken) : Promise.resolve([]),
-      ]);
+      const [goalsRes, accountsRes] = await Promise.all([listGoals(accessToken), listAccounts(accessToken)]);
       setGoals(goalsRes);
       setAccounts(accountsRes);
     } catch (err) {
@@ -71,11 +69,11 @@ export default function ObjectifsPage() {
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault();
+    if (!accessToken) return;
     setSubmitting(true);
     setError(null);
     try {
-      await createGoal({
-        userId,
+      await createGoal(accessToken, {
         name,
         targetAmount,
         targetDate: targetDate ? new Date(targetDate).toISOString() : undefined,
@@ -94,15 +92,16 @@ export default function ObjectifsPage() {
   }
 
   async function handleContribute(goalId: string) {
+    if (!accessToken) return;
     const amount = contributionAmounts[goalId];
     if (!amount) return;
     setError(null);
     try {
-      await addGoalContribution(goalId, { userId, amount });
+      await addGoalContribution(goalId, accessToken, { amount });
       setContributionAmounts((prev) => ({ ...prev, [goalId]: '' }));
       await refreshAll();
       if (expandedGoalId === goalId) {
-        setContributions(await listGoalContributions(goalId, userId));
+        setContributions(await listGoalContributions(goalId, accessToken));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
@@ -110,9 +109,10 @@ export default function ObjectifsPage() {
   }
 
   async function handleDelete(goalId: string) {
+    if (!accessToken) return;
     setError(null);
     try {
-      await deleteGoal(goalId, userId);
+      await deleteGoal(goalId, accessToken);
       if (expandedGoalId === goalId) setExpandedGoalId(null);
       await refreshAll();
     } catch (err) {
@@ -121,16 +121,25 @@ export default function ObjectifsPage() {
   }
 
   async function toggleHistory(goalId: string) {
+    if (!accessToken) return;
     if (expandedGoalId === goalId) {
       setExpandedGoalId(null);
       return;
     }
     setExpandedGoalId(goalId);
     try {
-      setContributions(await listGoalContributions(goalId, userId));
+      setContributions(await listGoalContributions(goalId, accessToken));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     }
+  }
+
+  if (!accessToken) {
+    return (
+      <main className="mx-auto max-w-2xl p-8">
+        <p className="text-sm text-muted-foreground">Redirection vers la connexion…</p>
+      </main>
+    );
   }
 
   return (
@@ -145,84 +154,69 @@ export default function ObjectifsPage() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor="userId" className="text-sm font-medium">
-          Identifiant utilisateur
-        </label>
-        <input
-          id="userId"
-          value={userId}
-          onChange={(event) => setUserId(event.target.value.trim())}
-          placeholder="uuid — via npm run prisma:seed --workspace=apps/api"
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-        />
-      </div>
-
       {error && (
         <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {error}
         </p>
       )}
 
-      {userId && (
-        <form onSubmit={handleCreate} className="flex flex-col gap-3 rounded-lg border border-border p-4">
-          <h2 className="font-medium">Nouvel objectif</h2>
+      <form onSubmit={handleCreate} className="flex flex-col gap-3 rounded-lg border border-border p-4">
+        <h2 className="font-medium">Nouvel objectif</h2>
 
+        <input
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Nom (ex: Fonds d'urgence)"
+          required
+          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+        />
+
+        <div className="grid grid-cols-2 gap-3">
           <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Nom (ex: Fonds d'urgence)"
+            value={targetAmount}
+            onChange={(event) => setTargetAmount(event.target.value)}
+            placeholder="Montant cible"
+            inputMode="decimal"
             required
             className="rounded-md border border-input bg-background px-3 py-2 text-sm"
           />
-
-          <div className="grid grid-cols-2 gap-3">
-            <input
-              value={targetAmount}
-              onChange={(event) => setTargetAmount(event.target.value)}
-              placeholder="Montant cible"
-              inputMode="decimal"
-              required
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-            />
-            <input
-              type="date"
-              value={targetDate}
-              onChange={(event) => setTargetDate(event.target.value)}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-            />
-          </div>
-
-          <select
-            value={accountId}
-            onChange={(event) => setAccountId(event.target.value)}
+          <input
+            type="date"
+            value={targetDate}
+            onChange={(event) => setTargetDate(event.target.value)}
             className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-          >
-            <option value="">Aucun compte lié</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
+          />
+        </div>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className={cn(
-              'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
-              submitting && 'opacity-60',
-            )}
-          >
-            {submitting ? 'Création…' : "Créer l'objectif"}
-          </button>
-        </form>
-      )}
+        <select
+          value={accountId}
+          onChange={(event) => setAccountId(event.target.value)}
+          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+        >
+          <option value="">Aucun compte lié</option>
+          {accounts.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
+          ))}
+        </select>
+
+        <button
+          type="submit"
+          disabled={submitting}
+          className={cn(
+            'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
+            submitting && 'opacity-60',
+          )}
+        >
+          {submitting ? 'Création…' : "Créer l'objectif"}
+        </button>
+      </form>
 
       <div className="flex flex-col gap-3">
         <h2 className="font-medium">Vos objectifs {loading && '(chargement…)'}</h2>
 
-        {userId && !loading && goals.length === 0 && (
+        {!loading && goals.length === 0 && (
           <p className="text-sm text-muted-foreground">Aucun objectif pour le moment.</p>
         )}
 

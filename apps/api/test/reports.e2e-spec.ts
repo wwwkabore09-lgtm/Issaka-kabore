@@ -70,7 +70,8 @@ describe('ReportsController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/goals')
-      .send({ userId, name: 'Fonds urgence rapport', targetAmount: '50000' });
+      .set(...authHeader(accessToken))
+      .send({ name: 'Fonds urgence rapport', targetAmount: '50000' });
 
     await request(app.getHttpServer())
       .post('/debts')

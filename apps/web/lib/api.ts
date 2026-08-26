@@ -142,33 +142,39 @@ export function deleteBudget(id: string, accessToken: string) {
   return apiFetch<void>(`/budgets/${id}`, { method: 'DELETE', headers: authHeaders(accessToken) });
 }
 
-export function listGoals(userId: string) {
-  return apiFetch<GoalProgressDto[]>(`/goals?userId=${encodeURIComponent(userId)}`);
+export function listGoals(accessToken: string) {
+  return apiFetch<GoalProgressDto[]>('/goals', { headers: authHeaders(accessToken) });
 }
 
-export function createGoal(payload: CreateGoalRequest) {
-  return apiFetch<void>('/goals', { method: 'POST', body: JSON.stringify(payload) });
-}
-
-export function updateGoal(id: string, userId: string, payload: UpdateGoalRequest) {
-  return apiFetch<void>(`/goals/${id}?userId=${encodeURIComponent(userId)}`, {
-    method: 'PATCH',
+export function createGoal(accessToken: string, payload: CreateGoalRequest) {
+  return apiFetch<void>('/goals', {
+    method: 'POST',
     body: JSON.stringify(payload),
+    headers: authHeaders(accessToken),
   });
 }
 
-export function deleteGoal(id: string, userId: string) {
-  return apiFetch<void>(`/goals/${id}?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' });
+export function updateGoal(id: string, accessToken: string, payload: UpdateGoalRequest) {
+  return apiFetch<void>(`/goals/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+    headers: authHeaders(accessToken),
+  });
 }
 
-export function listGoalContributions(goalId: string, userId: string) {
-  return apiFetch<GoalContributionDto[]>(`/goals/${goalId}/contributions?userId=${encodeURIComponent(userId)}`);
+export function deleteGoal(id: string, accessToken: string) {
+  return apiFetch<void>(`/goals/${id}`, { method: 'DELETE', headers: authHeaders(accessToken) });
 }
 
-export function addGoalContribution(goalId: string, payload: CreateGoalContributionRequest) {
+export function listGoalContributions(goalId: string, accessToken: string) {
+  return apiFetch<GoalContributionDto[]>(`/goals/${goalId}/contributions`, { headers: authHeaders(accessToken) });
+}
+
+export function addGoalContribution(goalId: string, accessToken: string, payload: CreateGoalContributionRequest) {
   return apiFetch<GoalContributionDto>(`/goals/${goalId}/contributions`, {
     method: 'POST',
     body: JSON.stringify(payload),
+    headers: authHeaders(accessToken),
   });
 }
 

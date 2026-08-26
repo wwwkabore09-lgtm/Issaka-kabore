@@ -41,7 +41,7 @@ describe('GoalsService', () => {
     it('crée un objectif sans compte lié', async () => {
       prisma.goal.create.mockResolvedValue(goal);
 
-      const result = await service.create({ userId, name: 'Achat moto', targetAmount: '500000' });
+      const result = await service.create(userId, { name: 'Achat moto', targetAmount: '500000' });
 
       expect(accountsService.getOwnedAccountOrThrow).not.toHaveBeenCalled();
       expect(result.targetAmount).toBe('500000.00');
@@ -50,20 +50,20 @@ describe('GoalsService', () => {
     it('vérifie la propriété du compte quand accountId est fourni', async () => {
       prisma.goal.create.mockResolvedValue({ ...goal, accountId });
 
-      await service.create({ userId, accountId, name: 'Épargne Wave', targetAmount: '100000' });
+      await service.create(userId, { accountId, name: 'Épargne Wave', targetAmount: '100000' });
 
       expect(accountsService.getOwnedAccountOrThrow).toHaveBeenCalledWith(accountId, userId);
     });
 
     it('rejette un montant cible à zéro', async () => {
-      await expect(service.create({ userId, name: 'Test', targetAmount: '0' })).rejects.toBeInstanceOf(
+      await expect(service.create(userId, { name: 'Test', targetAmount: '0' })).rejects.toBeInstanceOf(
         BadRequestException,
       );
     });
 
     it('rejette une targetDate dans le passé', async () => {
       await expect(
-        service.create({ userId, name: 'Test', targetAmount: '1000', targetDate: '2020-01-01T00:00:00.000Z' }),
+        service.create(userId, { name: 'Test', targetAmount: '1000', targetDate: '2020-01-01T00:00:00.000Z' }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
@@ -118,7 +118,7 @@ describe('GoalsService', () => {
         createdAt: new Date('2026-06-01T00:00:00.000Z'),
       });
 
-      const result = await service.addContribution(goalId, { userId, amount: '20000' });
+      const result = await service.addContribution(goalId, userId, { amount: '20000' });
 
       expect(result.amount).toBe('20000.00');
     });
@@ -126,7 +126,7 @@ describe('GoalsService', () => {
     it('rejette une contribution à zéro', async () => {
       prisma.goal.findUnique.mockResolvedValue(goal);
 
-      await expect(service.addContribution(goalId, { userId, amount: '0' })).rejects.toBeInstanceOf(
+      await expect(service.addContribution(goalId, userId, { amount: '0' })).rejects.toBeInstanceOf(
         BadRequestException,
       );
     });
@@ -134,7 +134,7 @@ describe('GoalsService', () => {
     it("lève NotFoundException (jamais Forbidden) si l'objectif appartient à un autre utilisateur", async () => {
       prisma.goal.findUnique.mockResolvedValue({ ...goal, userId: 'un-autre-user' });
 
-      await expect(service.addContribution(goalId, { userId, amount: '1000' })).rejects.toBeInstanceOf(
+      await expect(service.addContribution(goalId, userId, { amount: '1000' })).rejects.toBeInstanceOf(
         NotFoundException,
       );
       expect(prisma.goalContribution.create).not.toHaveBeenCalled();

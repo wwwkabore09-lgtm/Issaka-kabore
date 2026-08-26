@@ -9,6 +9,7 @@ describe('GoalsController (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let userId: string;
+  let accessToken: string;
   let accountId: string;
 
   beforeAll(async () => {
@@ -24,10 +25,11 @@ describe('GoalsController (e2e)', () => {
 
     const user = await registerTestUser(app, { email: `goals-e2e-${Date.now()}@finza.test`, fullName: 'Test User' });
     userId = user.userId;
+    accessToken = user.accessToken;
 
     const accountRes = await request(app.getHttpServer())
       .post('/accounts')
-      .set(...authHeader(user.accessToken))
+      .set(...authHeader(accessToken))
       .send({ name: 'Compte épargne', type: 'cash', currency: 'XOF' });
     accountId = accountRes.body.id;
   });
@@ -40,20 +42,30 @@ describe('GoalsController (e2e)', () => {
     await app.close();
   });
 
+  it('rejette les requêtes sans access token', async () => {
+    await request(app.getHttpServer()).get('/goals').expect(401);
+    await request(app.getHttpServer())
+      .post('/goals')
+      .send({ name: 'Objectif sans token', targetAmount: '1000' })
+      .expect(401);
+  });
+
   it('crée un objectif puis reflète les contributions dans la progression', async () => {
     const createRes = await request(app.getHttpServer())
       .post('/goals')
-      .send({ userId, accountId, name: 'Fonds urgence', targetAmount: '300000' })
+      .set(...authHeader(accessToken))
+      .send({ accountId, name: 'Fonds urgence', targetAmount: '300000' })
       .expect(201);
 
     await request(app.getHttpServer())
       .post(`/goals/${createRes.body.id}/contributions`)
-      .send({ userId, amount: '90000', contributedAt: '2026-06-01T00:00:00.000Z' })
+      .set(...authHeader(accessToken))
+      .send({ amount: '90000', contributedAt: '2026-06-01T00:00:00.000Z' })
       .expect(201);
 
     const detail = await request(app.getHttpServer())
       .get(`/goals/${createRes.body.id}`)
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .expect(200);
 
     expect(detail.body.currentAmount).toBe('90000.00');
@@ -65,17 +77,19 @@ describe('GoalsController (e2e)', () => {
   it('marque un objectif comme atteint après une contribution suffisante', async () => {
     const createRes = await request(app.getHttpServer())
       .post('/goals')
-      .send({ userId, name: 'Petit objectif', targetAmount: '5000' })
+      .set(...authHeader(accessToken))
+      .send({ name: 'Petit objectif', targetAmount: '5000' })
       .expect(201);
 
     await request(app.getHttpServer())
       .post(`/goals/${createRes.body.id}/contributions`)
-      .send({ userId, amount: '5000' })
+      .set(...authHeader(accessToken))
+      .send({ amount: '5000' })
       .expect(201);
 
     const detail = await request(app.getHttpServer())
       .get(`/goals/${createRes.body.id}`)
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .expect(200);
 
     expect(detail.body.isAchieved).toBe(true);
@@ -91,7 +105,8 @@ describe('GoalsController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/goals')
-      .send({ userId, accountId: otherAccount.id, name: 'Objectif invalide', targetAmount: '1000' })
+      .set(...authHeader(accessToken))
+      .send({ accountId: otherAccount.id, name: 'Objectif invalide', targetAmount: '1000' })
       .expect(404);
 
     await prisma.account.delete({ where: { id: otherAccount.id } });
@@ -101,21 +116,24 @@ describe('GoalsController (e2e)', () => {
   it('liste les contributions les plus récentes en premier', async () => {
     const createRes = await request(app.getHttpServer())
       .post('/goals')
-      .send({ userId, name: 'Objectif historique', targetAmount: '100000' })
+      .set(...authHeader(accessToken))
+      .send({ name: 'Objectif historique', targetAmount: '100000' })
       .expect(201);
 
     await request(app.getHttpServer())
       .post(`/goals/${createRes.body.id}/contributions`)
-      .send({ userId, amount: '10000', contributedAt: '2026-01-01T00:00:00.000Z' })
+      .set(...authHeader(accessToken))
+      .send({ amount: '10000', contributedAt: '2026-01-01T00:00:00.000Z' })
       .expect(201);
     await request(app.getHttpServer())
       .post(`/goals/${createRes.body.id}/contributions`)
-      .send({ userId, amount: '20000', contributedAt: '2026-03-01T00:00:00.000Z' })
+      .set(...authHeader(accessToken))
+      .send({ amount: '20000', contributedAt: '2026-03-01T00:00:00.000Z' })
       .expect(201);
 
     const res = await request(app.getHttpServer())
       .get(`/goals/${createRes.body.id}/contributions`)
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .expect(200);
 
     expect(res.body).toHaveLength(2);
@@ -126,12 +144,13 @@ describe('GoalsController (e2e)', () => {
   it('met à jour puis supprime un objectif', async () => {
     const createRes = await request(app.getHttpServer())
       .post('/goals')
-      .send({ userId, name: 'À renommer', targetAmount: '10000' })
+      .set(...authHeader(accessToken))
+      .send({ name: 'À renommer', targetAmount: '10000' })
       .expect(201);
 
     const patched = await request(app.getHttpServer())
       .patch(`/goals/${createRes.body.id}`)
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .send({ name: 'Renommé', targetAmount: '15000' })
       .expect(200);
     expect(patched.body.name).toBe('Renommé');
@@ -139,12 +158,12 @@ describe('GoalsController (e2e)', () => {
 
     await request(app.getHttpServer())
       .delete(`/goals/${createRes.body.id}`)
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .expect(204);
 
     await request(app.getHttpServer())
       .get(`/goals/${createRes.body.id}`)
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .expect(404);
   });
 });

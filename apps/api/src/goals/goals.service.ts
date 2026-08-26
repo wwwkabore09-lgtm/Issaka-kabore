@@ -14,7 +14,7 @@ export class GoalsService {
     private readonly accountsService: AccountsService,
   ) {}
 
-  async create(dto: CreateGoalDto): Promise<GoalDto> {
+  async create(userId: string, dto: CreateGoalDto): Promise<GoalDto> {
     const targetAmount = new Prisma.Decimal(dto.targetAmount);
     if (targetAmount.lte(0)) {
       throw new BadRequestException('targetAmount doit être strictement positif');
@@ -23,12 +23,12 @@ export class GoalsService {
     const targetDate = this.parseFutureDateOrThrow(dto.targetDate, 'targetDate');
 
     if (dto.accountId) {
-      await this.accountsService.getOwnedAccountOrThrow(dto.accountId, dto.userId);
+      await this.accountsService.getOwnedAccountOrThrow(dto.accountId, userId);
     }
 
     const goal = await this.prisma.goal.create({
       data: {
-        userId: dto.userId,
+        userId,
         accountId: dto.accountId,
         name: dto.name,
         targetAmount,
@@ -86,8 +86,8 @@ export class GoalsService {
     }));
   }
 
-  async addContribution(goalId: string, dto: CreateContributionDto): Promise<GoalContributionDto> {
-    await this.getOwnedGoalOrThrow(goalId, dto.userId);
+  async addContribution(goalId: string, userId: string, dto: CreateContributionDto): Promise<GoalContributionDto> {
+    await this.getOwnedGoalOrThrow(goalId, userId);
 
     const amount = new Prisma.Decimal(dto.amount);
     if (amount.lte(0)) {

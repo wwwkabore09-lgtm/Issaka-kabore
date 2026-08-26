@@ -10,8 +10,6 @@ export interface GoalDto {
 }
 
 export interface CreateGoalRequest {
-  // Temporaire : tant que le domaine auth n'existe pas (cf. domaine Accounts).
-  userId: string;
   accountId?: string;
   name: string;
   targetAmount: string;
@@ -48,7 +46,6 @@ export interface GoalContributionDto {
 }
 
 export interface CreateGoalContributionRequest {
-  userId: string;
   amount: string;
   note?: string;
   contributedAt?: string;

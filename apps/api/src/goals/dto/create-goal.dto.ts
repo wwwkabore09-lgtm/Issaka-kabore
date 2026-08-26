@@ -1,10 +1,6 @@
 import { IsISO8601, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, MaxLength } from 'class-validator';
 
 export class CreateGoalDto {
-  // Temporaire : tant que le domaine auth n'existe pas (cf. domaine Accounts).
-  @IsUUID()
-  userId!: string;
-
   @IsOptional()
   @IsUUID()
   accountId?: string;
