@@ -2,10 +2,6 @@ import { DEBT_DIRECTIONS, type DebtDirection } from '@finza/shared-types';
 import { IsIn, IsISO8601, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, MaxLength } from 'class-validator';
 
 export class CreateDebtDto {
-  // Temporaire : tant que le domaine auth n'existe pas (cf. domaine Accounts).
-  @IsUUID()
-  userId!: string;
-
   @IsIn(DEBT_DIRECTIONS)
   type!: DebtDirection;
 

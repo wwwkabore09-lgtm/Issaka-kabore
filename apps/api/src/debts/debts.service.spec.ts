@@ -43,7 +43,7 @@ describe('DebtsService', () => {
     it('crée une dette (type debt) sans compte lié', async () => {
       prisma.debt.create.mockResolvedValue(debt);
 
-      const result = await service.create({ userId, type: 'debt', counterpartyName: 'Boubacar', principalAmount: '100000' });
+      const result = await service.create(userId, { type: 'debt', counterpartyName: 'Boubacar', principalAmount: '100000' });
 
       expect(accountsService.getOwnedAccountOrThrow).not.toHaveBeenCalled();
       expect(result.type).toBe('debt');
@@ -53,8 +53,7 @@ describe('DebtsService', () => {
     it('vérifie la propriété du compte quand accountId est fourni', async () => {
       prisma.debt.create.mockResolvedValue({ ...debt, accountId, type: 'credit' });
 
-      await service.create({
-        userId,
+      await service.create(userId, {
         type: 'credit',
         counterpartyName: 'Awa',
         accountId,
@@ -66,7 +65,7 @@ describe('DebtsService', () => {
 
     it('rejette un principalAmount à zéro', async () => {
       await expect(
-        service.create({ userId, type: 'debt', counterpartyName: 'Test', principalAmount: '0' }),
+        service.create(userId, { type: 'debt', counterpartyName: 'Test', principalAmount: '0' }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
@@ -118,7 +117,7 @@ describe('DebtsService', () => {
         createdAt: new Date('2026-06-01T00:00:00.000Z'),
       });
 
-      const result = await service.addPayment(debtId, { userId, amount: '25000' });
+      const result = await service.addPayment(debtId, userId, { amount: '25000' });
 
       expect(result.amount).toBe('25000.00');
     });
@@ -126,13 +125,13 @@ describe('DebtsService', () => {
     it('rejette un paiement à zéro', async () => {
       prisma.debt.findUnique.mockResolvedValue(debt);
 
-      await expect(service.addPayment(debtId, { userId, amount: '0' })).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.addPayment(debtId, userId, { amount: '0' })).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it("lève NotFoundException (jamais Forbidden) si la dette appartient à un autre utilisateur", async () => {
       prisma.debt.findUnique.mockResolvedValue({ ...debt, userId: 'un-autre-user' });
 
-      await expect(service.addPayment(debtId, { userId, amount: '1000' })).rejects.toBeInstanceOf(
+      await expect(service.addPayment(debtId, userId, { amount: '1000' })).rejects.toBeInstanceOf(
         NotFoundException,
       );
       expect(prisma.debtPayment.create).not.toHaveBeenCalled();

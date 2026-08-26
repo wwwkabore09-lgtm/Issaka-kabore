@@ -3,11 +3,13 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { authHeader, registerTestUser } from './utils/auth';
 
 describe('DebtsController (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let userId: string;
+  let accessToken: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -20,10 +22,9 @@ describe('DebtsController (e2e)', () => {
 
     prisma = app.get(PrismaService);
 
-    const user = await prisma.user.create({
-      data: { email: `debts-e2e-${Date.now()}@finza.test`, fullName: 'Test User' },
-    });
-    userId = user.id;
+    const user = await registerTestUser(app, { email: `debts-e2e-${Date.now()}@finza.test`, fullName: 'Test User' });
+    userId = user.userId;
+    accessToken = user.accessToken;
   });
 
   afterAll(async () => {
@@ -34,20 +35,30 @@ describe('DebtsController (e2e)', () => {
     await app.close();
   });
 
+  it('rejette les requêtes sans access token', async () => {
+    await request(app.getHttpServer()).get('/debts').expect(401);
+    await request(app.getHttpServer())
+      .post('/debts')
+      .send({ type: 'debt', counterpartyName: 'Sans token', principalAmount: '1000' })
+      .expect(401);
+  });
+
   it('crée une dette (je dois) puis reflète les paiements dans la progression', async () => {
     const createRes = await request(app.getHttpServer())
       .post('/debts')
-      .send({ userId, type: 'debt', counterpartyName: 'Boubacar', principalAmount: '100000' })
+      .set(...authHeader(accessToken))
+      .send({ type: 'debt', counterpartyName: 'Boubacar', principalAmount: '100000' })
       .expect(201);
 
     await request(app.getHttpServer())
       .post(`/debts/${createRes.body.id}/payments`)
-      .send({ userId, amount: '30000', paidAt: '2026-06-01T00:00:00.000Z' })
+      .set(...authHeader(accessToken))
+      .send({ amount: '30000', paidAt: '2026-06-01T00:00:00.000Z' })
       .expect(201);
 
     const detail = await request(app.getHttpServer())
       .get(`/debts/${createRes.body.id}`)
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .expect(200);
 
     expect(detail.body.type).toBe('debt');
@@ -60,17 +71,19 @@ describe('DebtsController (e2e)', () => {
   it('marque une créance (on me doit) comme soldée après remboursement intégral', async () => {
     const createRes = await request(app.getHttpServer())
       .post('/debts')
-      .send({ userId, type: 'credit', counterpartyName: 'Awa', principalAmount: '15000' })
+      .set(...authHeader(accessToken))
+      .send({ type: 'credit', counterpartyName: 'Awa', principalAmount: '15000' })
       .expect(201);
 
     await request(app.getHttpServer())
       .post(`/debts/${createRes.body.id}/payments`)
-      .send({ userId, amount: '15000' })
+      .set(...authHeader(accessToken))
+      .send({ amount: '15000' })
       .expect(201);
 
     const detail = await request(app.getHttpServer())
       .get(`/debts/${createRes.body.id}`)
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .expect(200);
 
     expect(detail.body.isSettled).toBe(true);
@@ -79,7 +92,8 @@ describe('DebtsController (e2e)', () => {
   it('filtre la liste par direction (debt vs credit)', async () => {
     const res = await request(app.getHttpServer())
       .get('/debts')
-      .query({ userId, type: 'credit' })
+      .set(...authHeader(accessToken))
+      .query({ type: 'credit' })
       .expect(200);
 
     expect(res.body.every((d: { type: string }) => d.type === 'credit')).toBe(true);
@@ -96,7 +110,8 @@ describe('DebtsController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/debts')
-      .send({ userId, type: 'debt', counterpartyName: 'Test', accountId: otherAccount.id, principalAmount: '1000' })
+      .set(...authHeader(accessToken))
+      .send({ type: 'debt', counterpartyName: 'Test', accountId: otherAccount.id, principalAmount: '1000' })
       .expect(404);
 
     await prisma.account.delete({ where: { id: otherAccount.id } });
@@ -106,21 +121,24 @@ describe('DebtsController (e2e)', () => {
   it('liste les paiements les plus récents en premier', async () => {
     const createRes = await request(app.getHttpServer())
       .post('/debts')
-      .send({ userId, type: 'debt', counterpartyName: 'Historique', principalAmount: '100000' })
+      .set(...authHeader(accessToken))
+      .send({ type: 'debt', counterpartyName: 'Historique', principalAmount: '100000' })
       .expect(201);
 
     await request(app.getHttpServer())
       .post(`/debts/${createRes.body.id}/payments`)
-      .send({ userId, amount: '10000', paidAt: '2026-01-01T00:00:00.000Z' })
+      .set(...authHeader(accessToken))
+      .send({ amount: '10000', paidAt: '2026-01-01T00:00:00.000Z' })
       .expect(201);
     await request(app.getHttpServer())
       .post(`/debts/${createRes.body.id}/payments`)
-      .send({ userId, amount: '20000', paidAt: '2026-03-01T00:00:00.000Z' })
+      .set(...authHeader(accessToken))
+      .send({ amount: '20000', paidAt: '2026-03-01T00:00:00.000Z' })
       .expect(201);
 
     const res = await request(app.getHttpServer())
       .get(`/debts/${createRes.body.id}/payments`)
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .expect(200);
 
     expect(res.body).toHaveLength(2);
@@ -131,12 +149,13 @@ describe('DebtsController (e2e)', () => {
   it('met à jour puis supprime une dette', async () => {
     const createRes = await request(app.getHttpServer())
       .post('/debts')
-      .send({ userId, type: 'debt', counterpartyName: 'À renommer', principalAmount: '10000' })
+      .set(...authHeader(accessToken))
+      .send({ type: 'debt', counterpartyName: 'À renommer', principalAmount: '10000' })
       .expect(201);
 
     const patched = await request(app.getHttpServer())
       .patch(`/debts/${createRes.body.id}`)
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .send({ counterpartyName: 'Renommé', principalAmount: '15000' })
       .expect(200);
     expect(patched.body.counterpartyName).toBe('Renommé');
@@ -144,12 +163,12 @@ describe('DebtsController (e2e)', () => {
 
     await request(app.getHttpServer())
       .delete(`/debts/${createRes.body.id}`)
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .expect(204);
 
     await request(app.getHttpServer())
       .get(`/debts/${createRes.body.id}`)
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .expect(404);
   });
 });

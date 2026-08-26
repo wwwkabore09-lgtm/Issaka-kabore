@@ -75,7 +75,8 @@ describe('ReportsController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/debts')
-      .send({ userId, type: 'debt', counterpartyName: 'Test rapport', principalAmount: '30000' });
+      .set(...authHeader(accessToken))
+      .send({ type: 'debt', counterpartyName: 'Test rapport', principalAmount: '30000' });
 
     await request(app.getHttpServer())
       .post('/subscriptions')

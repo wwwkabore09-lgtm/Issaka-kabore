@@ -14,19 +14,19 @@ export class DebtsService {
     private readonly accountsService: AccountsService,
   ) {}
 
-  async create(dto: CreateDebtDto): Promise<DebtDto> {
+  async create(userId: string, dto: CreateDebtDto): Promise<DebtDto> {
     const principalAmount = new Prisma.Decimal(dto.principalAmount);
     if (principalAmount.lte(0)) {
       throw new BadRequestException('principalAmount doit être strictement positif');
     }
 
     if (dto.accountId) {
-      await this.accountsService.getOwnedAccountOrThrow(dto.accountId, dto.userId);
+      await this.accountsService.getOwnedAccountOrThrow(dto.accountId, userId);
     }
 
     const debt = await this.prisma.debt.create({
       data: {
-        userId: dto.userId,
+        userId,
         type: dto.type,
         counterpartyName: dto.counterpartyName,
         accountId: dto.accountId,
@@ -79,8 +79,8 @@ export class DebtsService {
     return payments.map((p) => this.toPaymentDto(p));
   }
 
-  async addPayment(debtId: string, dto: CreatePaymentDto): Promise<DebtPaymentDto> {
-    await this.getOwnedDebtOrThrow(debtId, dto.userId);
+  async addPayment(debtId: string, userId: string, dto: CreatePaymentDto): Promise<DebtPaymentDto> {
+    await this.getOwnedDebtOrThrow(debtId, userId);
 
     const amount = new Prisma.Decimal(dto.amount);
     if (amount.lte(0)) {

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { AccountDto, DebtDirection, DebtPaymentDto, DebtProgressDto } from '@finza/shared-types';
 import { DEBT_DIRECTIONS } from '@finza/shared-types';
 import { cn } from '@finza/ui';
@@ -15,8 +16,6 @@ import {
 } from '@/lib/api';
 import { getStoredAccessToken } from '@/lib/auth-session';
 
-const USER_ID_STORAGE_KEY = 'finza_demo_user_id';
-
 const DEBT_DIRECTION_LABELS: Record<DebtDirection, string> = {
   debt: 'Je dois',
   credit: 'On me doit',
@@ -27,7 +26,8 @@ function formatXof(value: string) {
 }
 
 export default function DettesPage() {
-  const [userId, setUserId] = useState('');
+  const router = useRouter();
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [debts, setDebts] = useState<DebtProgressDto[]>([]);
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
   const [filter, setFilter] = useState<DebtDirection | 'all'>('all');
@@ -46,16 +46,19 @@ export default function DettesPage() {
   const [payments, setPayments] = useState<DebtPaymentDto[]>([]);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(USER_ID_STORAGE_KEY);
-    if (stored) setUserId(stored);
-  }, []);
+    const stored = getStoredAccessToken();
+    if (!stored) {
+      router.replace('/connexion');
+      return;
+    }
+    setAccessToken(stored);
+  }, [router]);
 
   useEffect(() => {
-    if (!userId) return;
-    window.localStorage.setItem(USER_ID_STORAGE_KEY, userId);
+    if (!accessToken) return;
     void refreshAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [accessToken]);
 
   const visibleDebts = useMemo(
     () => (filter === 'all' ? debts : debts.filter((d) => d.type === filter)),
@@ -63,16 +66,11 @@ export default function DettesPage() {
   );
 
   async function refreshAll() {
+    if (!accessToken) return;
     setLoading(true);
     setError(null);
     try {
-      const accessToken = getStoredAccessToken();
-      const [debtsRes, accountsRes] = await Promise.all([
-        listDebts(userId),
-        // Le domaine Comptes exige désormais un vrai token JWT ; sans session connectée,
-        // le sélecteur de compte reste simplement vide (les dettes restent utilisables).
-        accessToken ? listAccounts(accessToken) : Promise.resolve([]),
-      ]);
+      const [debtsRes, accountsRes] = await Promise.all([listDebts(accessToken), listAccounts(accessToken)]);
       setDebts(debtsRes);
       setAccounts(accountsRes);
     } catch (err) {
@@ -84,11 +82,11 @@ export default function DettesPage() {
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault();
+    if (!accessToken) return;
     setSubmitting(true);
     setError(null);
     try {
-      await createDebt({
-        userId,
+      await createDebt(accessToken, {
         type,
         counterpartyName,
         principalAmount,
@@ -108,15 +106,16 @@ export default function DettesPage() {
   }
 
   async function handlePay(debtId: string) {
+    if (!accessToken) return;
     const amount = paymentAmounts[debtId];
     if (!amount) return;
     setError(null);
     try {
-      await addDebtPayment(debtId, { userId, amount });
+      await addDebtPayment(debtId, accessToken, { amount });
       setPaymentAmounts((prev) => ({ ...prev, [debtId]: '' }));
       await refreshAll();
       if (expandedDebtId === debtId) {
-        setPayments(await listDebtPayments(debtId, userId));
+        setPayments(await listDebtPayments(debtId, accessToken));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
@@ -124,9 +123,10 @@ export default function DettesPage() {
   }
 
   async function handleDelete(debtId: string) {
+    if (!accessToken) return;
     setError(null);
     try {
-      await deleteDebt(debtId, userId);
+      await deleteDebt(debtId, accessToken);
       if (expandedDebtId === debtId) setExpandedDebtId(null);
       await refreshAll();
     } catch (err) {
@@ -135,16 +135,25 @@ export default function DettesPage() {
   }
 
   async function toggleHistory(debtId: string) {
+    if (!accessToken) return;
     if (expandedDebtId === debtId) {
       setExpandedDebtId(null);
       return;
     }
     setExpandedDebtId(debtId);
     try {
-      setPayments(await listDebtPayments(debtId, userId));
+      setPayments(await listDebtPayments(debtId, accessToken));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     }
+  }
+
+  if (!accessToken) {
+    return (
+      <main className="mx-auto max-w-2xl p-8">
+        <p className="text-sm text-muted-foreground">Redirection vers la connexion…</p>
+      </main>
+    );
   }
 
   return (
@@ -157,28 +166,14 @@ export default function DettesPage() {
         <p className="text-sm text-muted-foreground">Ce que vous devez, et ce qu&apos;on vous doit.</p>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor="userId" className="text-sm font-medium">
-          Identifiant utilisateur
-        </label>
-        <input
-          id="userId"
-          value={userId}
-          onChange={(event) => setUserId(event.target.value.trim())}
-          placeholder="uuid — via npm run prisma:seed --workspace=apps/api"
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-        />
-      </div>
-
       {error && (
         <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {error}
         </p>
       )}
 
-      {userId && (
-        <form onSubmit={handleCreate} className="flex flex-col gap-3 rounded-lg border border-border p-4">
-          <h2 className="font-medium">Nouvelle entrée</h2>
+      <form onSubmit={handleCreate} className="flex flex-col gap-3 rounded-lg border border-border p-4">
+        <h2 className="font-medium">Nouvelle entrée</h2>
 
           <div className="flex items-center gap-4 text-sm">
             {DEBT_DIRECTIONS.map((value) => (
@@ -235,10 +230,9 @@ export default function DettesPage() {
               submitting && 'opacity-60',
             )}
           >
-            {submitting ? 'Création…' : 'Ajouter'}
-          </button>
-        </form>
-      )}
+          {submitting ? 'Création…' : 'Ajouter'}
+        </button>
+      </form>
 
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -260,7 +254,7 @@ export default function DettesPage() {
           </div>
         </div>
 
-        {userId && !loading && visibleDebts.length === 0 && (
+        {!loading && visibleDebts.length === 0 && (
           <p className="text-sm text-muted-foreground">Aucune entrée.</p>
         )}
 

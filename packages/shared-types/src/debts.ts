@@ -17,8 +17,6 @@ export interface DebtDto {
 }
 
 export interface CreateDebtRequest {
-  // Temporaire : tant que le domaine auth n'existe pas (cf. domaine Accounts).
-  userId: string;
   type: DebtDirection;
   counterpartyName: string;
   accountId?: string;
@@ -59,7 +57,6 @@ export interface DebtPaymentDto {
 }
 
 export interface CreateDebtPaymentRequest {
-  userId: string;
   amount: string;
   note?: string;
   paidAt?: string;

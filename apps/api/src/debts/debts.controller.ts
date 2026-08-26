@@ -1,48 +1,54 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { DebtsService } from './debts.service';
 import { CreateDebtDto } from './dto/create-debt.dto';
 import { UpdateDebtDto } from './dto/update-debt.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { ListDebtsQueryDto } from './dto/list-debts-query.dto';
-import { OwnerQueryDto } from './dto/owner-query.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
 
 @Controller('debts')
+@UseGuards(JwtAuthGuard)
 export class DebtsController {
   constructor(private readonly debtsService: DebtsService) {}
 
   @Post()
-  create(@Body() dto: CreateDebtDto) {
-    return this.debtsService.create(dto);
+  create(@CurrentUser() userId: string, @Body() dto: CreateDebtDto) {
+    return this.debtsService.create(userId, dto);
   }
 
   @Get()
-  findAll(@Query() query: ListDebtsQueryDto) {
-    return this.debtsService.findAllForUser(query.userId, query.type);
+  findAll(@CurrentUser() userId: string, @Query() query: ListDebtsQueryDto) {
+    return this.debtsService.findAllForUser(userId, query.type);
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string, @Query() query: OwnerQueryDto) {
-    return this.debtsService.findOneForUser(id, query.userId);
+  findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() userId: string) {
+    return this.debtsService.findOneForUser(id, userId);
   }
 
   @Patch(':id')
-  update(@Param('id', ParseUUIDPipe) id: string, @Query() query: OwnerQueryDto, @Body() dto: UpdateDebtDto) {
-    return this.debtsService.update(id, query.userId, dto);
+  update(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() userId: string, @Body() dto: UpdateDebtDto) {
+    return this.debtsService.update(id, userId, dto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id', ParseUUIDPipe) id: string, @Query() query: OwnerQueryDto) {
-    await this.debtsService.remove(id, query.userId);
+  async remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() userId: string) {
+    await this.debtsService.remove(id, userId);
   }
 
   @Get(':id/payments')
-  listPayments(@Param('id', ParseUUIDPipe) id: string, @Query() query: OwnerQueryDto) {
-    return this.debtsService.listPayments(id, query.userId);
+  listPayments(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() userId: string) {
+    return this.debtsService.listPayments(id, userId);
   }
 
   @Post(':id/payments')
-  addPayment(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CreatePaymentDto) {
-    return this.debtsService.addPayment(id, dto);
+  addPayment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() userId: string,
+    @Body() dto: CreatePaymentDto,
+  ) {
+    return this.debtsService.addPayment(id, userId, dto);
   }
 }

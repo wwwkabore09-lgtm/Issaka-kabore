@@ -178,34 +178,41 @@ export function addGoalContribution(goalId: string, accessToken: string, payload
   });
 }
 
-export function listDebts(userId: string, type?: 'debt' | 'credit') {
-  const query = new URLSearchParams({ userId, ...(type ? { type } : {}) });
-  return apiFetch<DebtProgressDto[]>(`/debts?${query.toString()}`);
+export function listDebts(accessToken: string, type?: 'debt' | 'credit') {
+  const query = new URLSearchParams(type ? { type } : {});
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return apiFetch<DebtProgressDto[]>(`/debts${suffix}`, { headers: authHeaders(accessToken) });
 }
 
-export function createDebt(payload: CreateDebtRequest) {
-  return apiFetch<void>('/debts', { method: 'POST', body: JSON.stringify(payload) });
-}
-
-export function updateDebt(id: string, userId: string, payload: UpdateDebtRequest) {
-  return apiFetch<void>(`/debts/${id}?userId=${encodeURIComponent(userId)}`, {
-    method: 'PATCH',
+export function createDebt(accessToken: string, payload: CreateDebtRequest) {
+  return apiFetch<void>('/debts', {
+    method: 'POST',
     body: JSON.stringify(payload),
+    headers: authHeaders(accessToken),
   });
 }
 
-export function deleteDebt(id: string, userId: string) {
-  return apiFetch<void>(`/debts/${id}?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' });
+export function updateDebt(id: string, accessToken: string, payload: UpdateDebtRequest) {
+  return apiFetch<void>(`/debts/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+    headers: authHeaders(accessToken),
+  });
 }
 
-export function listDebtPayments(debtId: string, userId: string) {
-  return apiFetch<DebtPaymentDto[]>(`/debts/${debtId}/payments?userId=${encodeURIComponent(userId)}`);
+export function deleteDebt(id: string, accessToken: string) {
+  return apiFetch<void>(`/debts/${id}`, { method: 'DELETE', headers: authHeaders(accessToken) });
 }
 
-export function addDebtPayment(debtId: string, payload: CreateDebtPaymentRequest) {
+export function listDebtPayments(debtId: string, accessToken: string) {
+  return apiFetch<DebtPaymentDto[]>(`/debts/${debtId}/payments`, { headers: authHeaders(accessToken) });
+}
+
+export function addDebtPayment(debtId: string, accessToken: string, payload: CreateDebtPaymentRequest) {
   return apiFetch<DebtPaymentDto>(`/debts/${debtId}/payments`, {
     method: 'POST',
     body: JSON.stringify(payload),
+    headers: authHeaders(accessToken),
   });
 }
 
