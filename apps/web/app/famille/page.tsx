@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { FamilyDto, SharedAccountDto } from '@finza/shared-types';
@@ -14,6 +13,7 @@ import {
   removeFamilyMember,
 } from '@/lib/api';
 import { getStoredAccessToken, getStoredUserId } from '@/lib/auth-session';
+import { AppNav } from '@/components/app-nav';
 
 function formatXof(value: string) {
   return `${Number(value).toLocaleString('fr-FR')} FCFA`;
@@ -130,10 +130,8 @@ export default function FamillePage() {
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-8 p-8">
+      <AppNav />
       <div>
-        <Link href="/comptes" className="text-xs text-muted-foreground underline">
-          ← Comptes
-        </Link>
         <h1 className="text-2xl font-semibold">Famille</h1>
         <p className="text-sm text-muted-foreground">
           Un compte n&apos;est jamais visible aux autres membres tant qu&apos;il n&apos;est pas explicitement partagé

@@ -25,6 +25,7 @@ import {
 } from '@/lib/api';
 import { REVENUE_CATEGORY_LABELS, REVENUE_FREQUENCY_LABELS } from '@/lib/account-labels';
 import { clearSession, getStoredAccessToken, getStoredRefreshToken, getStoredUserEmail } from '@/lib/auth-session';
+import { AppNav } from '@/components/app-nav';
 
 const DEFAULT_CURRENCY = COUNTRIES[LAUNCH_COUNTRY].currency;
 
@@ -177,27 +178,9 @@ export default function ComptesPage() {
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-8 p-8">
+      <AppNav />
       <div>
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">Comptes</h1>
-          <div className="flex gap-3">
-            <Link href="/objectifs" className="text-xs text-muted-foreground underline">
-              Objectifs d&apos;épargne →
-            </Link>
-            <Link href="/dettes" className="text-xs text-muted-foreground underline">
-              Dettes et créances →
-            </Link>
-            <Link href="/abonnements" className="text-xs text-muted-foreground underline">
-              Abonnements →
-            </Link>
-            <Link href="/rapports" className="text-xs text-muted-foreground underline">
-              Rapports →
-            </Link>
-            <Link href="/famille" className="text-xs text-muted-foreground underline">
-              Famille →
-            </Link>
-          </div>
-        </div>
+        <h1 className="text-2xl font-semibold">Comptes</h1>
         <p className="text-sm text-muted-foreground">
           Vos revenus, saisis et suivis manuellement — aucune connexion à un service financier externe.
         </p>

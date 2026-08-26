@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { BillingFrequency, SubscriptionDto, SubscriptionsSummaryDto } from '@finza/shared-types';
@@ -15,6 +14,7 @@ import {
   updateSubscription,
 } from '@/lib/api';
 import { getStoredAccessToken } from '@/lib/auth-session';
+import { AppNav } from '@/components/app-nav';
 
 const BILLING_FREQUENCY_LABELS: Record<BillingFrequency, string> = {
   weekly: 'Hebdomadaire',
@@ -146,10 +146,8 @@ export default function AbonnementsPage() {
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-8 p-8">
+      <AppNav />
       <div>
-        <Link href="/comptes" className="text-xs text-muted-foreground underline">
-          ← Comptes
-        </Link>
         <h1 className="text-2xl font-semibold">Abonnements</h1>
         <p className="text-sm text-muted-foreground">Paiements récurrents, ramenés à un coût mensuel comparable.</p>
       </div>

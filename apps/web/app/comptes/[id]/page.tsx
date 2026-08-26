@@ -28,6 +28,7 @@ import {
 } from '@/lib/api';
 import { REVENUE_CATEGORY_LABELS, REVENUE_FREQUENCY_LABELS } from '@/lib/account-labels';
 import { getStoredAccessToken, getStoredUserId } from '@/lib/auth-session';
+import { AppNav } from '@/components/app-nav';
 
 const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   income: 'Revenu',
@@ -206,6 +207,7 @@ export default function CompteDetailPage() {
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-8 p-8">
+      <AppNav />
       <div>
         <Link href="/comptes" className="text-xs text-muted-foreground underline">
           ← Retour aux comptes

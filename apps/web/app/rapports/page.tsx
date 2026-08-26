@@ -1,12 +1,12 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ReportDto } from '@finza/shared-types';
 import { cn } from '@finza/ui';
 import { deleteReport, generateReport, listReports } from '@/lib/api';
 import { getStoredAccessToken } from '@/lib/auth-session';
+import { AppNav } from '@/components/app-nav';
 
 function formatXof(value: string) {
   return `${Number(value).toLocaleString('fr-FR')} FCFA`;
@@ -89,10 +89,8 @@ export default function RapportsPage() {
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-8 p-8">
+      <AppNav />
       <div>
-        <Link href="/comptes" className="text-xs text-muted-foreground underline">
-          ← Comptes
-        </Link>
         <h1 className="text-2xl font-semibold">Rapports</h1>
         <p className="text-sm text-muted-foreground">
           Instantané figé de vos finances sur une période — ces chiffres ne bougent plus après génération.
