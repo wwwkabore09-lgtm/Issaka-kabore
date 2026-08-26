@@ -106,6 +106,9 @@ export default function ComptesPage() {
             <Link href="/dettes" className="text-xs text-muted-foreground underline">
               Dettes et créances →
             </Link>
+            <Link href="/abonnements" className="text-xs text-muted-foreground underline">
+              Abonnements →
+            </Link>
           </div>
         </div>
         <p className="text-sm text-muted-foreground">

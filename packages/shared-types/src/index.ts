@@ -7,4 +7,5 @@ export * from './budgets';
 export * from './categories';
 export * from './debts';
 export * from './goals';
+export * from './subscriptions';
 export * from './transactions';

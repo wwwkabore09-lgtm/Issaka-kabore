@@ -11,16 +11,20 @@ import type {
   CreateGoalContributionRequest,
   CreateGoalRequest,
   CreateTransactionRequest,
+  CreateSubscriptionRequest,
   DebtPaymentDto,
   DebtProgressDto,
   GoalContributionDto,
   GoalProgressDto,
+  SubscriptionDto,
+  SubscriptionsSummaryDto,
   TransactionDto,
   TransactionSummaryDto,
   UpdateAccountRequest,
   UpdateBudgetRequest,
   UpdateDebtRequest,
   UpdateGoalRequest,
+  UpdateSubscriptionRequest,
 } from '@finza/shared-types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
@@ -165,4 +169,32 @@ export function addDebtPayment(debtId: string, payload: CreateDebtPaymentRequest
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+export function listSubscriptions(userId: string, activeOnly?: boolean) {
+  const query = new URLSearchParams({ userId, ...(activeOnly ? { activeOnly: 'true' } : {}) });
+  return apiFetch<SubscriptionDto[]>(`/subscriptions?${query.toString()}`);
+}
+
+export function getSubscriptionsSummary(userId: string) {
+  return apiFetch<SubscriptionsSummaryDto>(`/subscriptions/summary?userId=${encodeURIComponent(userId)}`);
+}
+
+export function createSubscription(payload: CreateSubscriptionRequest) {
+  return apiFetch<void>('/subscriptions', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export function updateSubscription(id: string, userId: string, payload: UpdateSubscriptionRequest) {
+  return apiFetch<void>(`/subscriptions/${id}?userId=${encodeURIComponent(userId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+export function renewSubscription(id: string, userId: string) {
+  return apiFetch<SubscriptionDto>(`/subscriptions/${id}/renew`, { method: 'POST', body: JSON.stringify({ userId }) });
+}
+
+export function deleteSubscription(id: string, userId: string) {
+  return apiFetch<void>(`/subscriptions/${id}?userId=${encodeURIComponent(userId)}`, { method: 'DELETE' });
 }

@@ -21,10 +21,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  accounts   Account[]
-  categories Category[]
-  goals      Goal[]
-  debts      Debt[]
+  accounts      Account[]
+  categories    Category[]
+  goals         Goal[]
+  debts         Debt[]
+  subscriptions Subscription[]
 
   @@map("users")
 }
@@ -78,6 +79,7 @@ model Account {
   budgets        Budget[]
   goals          Goal[]
   debts          Debt[]
+  subscriptions  Subscription[]
 
   @@index([userId])
   @@map("accounts")
@@ -114,8 +116,9 @@ model Category {
   kind      CategoryKind
   createdAt DateTime     @default(now())
 
-  transactions Transaction[]
-  budgets      Budget[]
+  transactions  Transaction[]
+  budgets       Budget[]
+  subscriptions Subscription[]
 
   @@unique([userId, key])
   @@map("categories")
@@ -246,4 +249,33 @@ model DebtPayment {
 
   @@index([debtId, paidAt])
   @@map("debt_payments")
+}
+
+enum BillingFrequency {
+  weekly
+  monthly
+  quarterly
+  yearly
+}
+
+// Un abonnement n'a pas de grand livre : contrairement aux comptes/objectifs/dettes, il
+// n'y a rien à reconstituer, seulement une échéance qui avance à chaque renouvellement.
+model Subscription {
+  id               String           @id @default(uuid())
+  userId           String
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId        String?
+  account          Account?         @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  categoryId       String?
+  category         Category?        @relation(fields: [categoryId], references: [id])
+  name             String
+  amount           Decimal          @db.Decimal(18, 2)
+  billingFrequency BillingFrequency
+  nextBillingDate  DateTime
+  isActive         Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([userId])
+  @@map("subscriptions")
 }
