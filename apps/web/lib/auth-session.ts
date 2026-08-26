@@ -1,7 +1,7 @@
 // Pont entre le domaine auth (tokens JWT) et le mécanisme "userId manuel" utilisé par
-// tous les autres domaines tant qu'ils n'ont pas migré vers l'authentification réelle :
-// se connecter remplit aussi finza_demo_user_id, donc le reste de l'app "fonctionne" tout
-// de suite pour l'utilisateur connecté, sans que chaque page vérifie le token côté serveur.
+// les domaines pas encore migrés vers l'authentification réelle : se connecter remplit
+// aussi finza_demo_user_id, donc ces pages "fonctionnent" tout de suite pour l'utilisateur
+// connecté. Les domaines migrés (ex: Comptes) utilisent getStoredAccessToken() à la place.
 const ACCESS_TOKEN_KEY = 'finza_access_token';
 const REFRESH_TOKEN_KEY = 'finza_refresh_token';
 const USER_ID_KEY = 'finza_demo_user_id';
@@ -31,6 +31,14 @@ export function clearSession() {
 
 export function getStoredRefreshToken(): string | null {
   return window.localStorage.getItem(REFRESH_TOKEN_KEY);
+}
+
+export function getStoredAccessToken(): string | null {
+  return window.localStorage.getItem(ACCESS_TOKEN_KEY);
+}
+
+export function getStoredUserId(): string | null {
+  return window.localStorage.getItem(USER_ID_KEY);
 }
 
 export function getStoredUserEmail(): string | null {

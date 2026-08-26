@@ -9,7 +9,7 @@ import { UpdateAccountDto } from './dto/update-account.dto';
 export class AccountsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateAccountDto): Promise<AccountDto> {
+  async create(userId: string, dto: CreateAccountDto): Promise<AccountDto> {
     const openingBalance = new Prisma.Decimal(dto.openingBalance ?? '0');
     const openingBalanceDate = dto.openingBalanceDate ? new Date(dto.openingBalanceDate) : new Date();
 
@@ -20,7 +20,7 @@ export class AccountsService {
     const account = await this.prisma.$transaction(async (tx) => {
       const created = await tx.account.create({
         data: {
-          userId: dto.userId,
+          userId,
           name: dto.name,
           type: dto.type,
           ownership: dto.ownership ?? 'personal',

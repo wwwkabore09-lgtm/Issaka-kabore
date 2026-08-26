@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ACCOUNT_OWNERSHIPS, ACCOUNT_TYPES, type AccountDto, type AccountOwnership, type AccountType } from '@finza/shared-types';
 import { COUNTRIES, CURRENCIES, LAUNCH_COUNTRY, type CurrencyCode } from '@finza/config';
 import { cn } from '@finza/ui';
 import { createAccount, listAccounts, logout as apiLogout, updateAccount } from '@/lib/api';
 import { ACCOUNT_TYPE_LABELS } from '@/lib/account-labels';
-import { clearSession, getStoredRefreshToken, getStoredUserEmail } from '@/lib/auth-session';
+import { clearSession, getStoredAccessToken, getStoredRefreshToken, getStoredUserEmail } from '@/lib/auth-session';
 
-const USER_ID_STORAGE_KEY = 'finza_demo_user_id';
 const DEFAULT_CURRENCY = COUNTRIES[LAUNCH_COUNTRY].currency;
 
 function formatBalance(value: string, currency: string) {
@@ -18,7 +18,8 @@ function formatBalance(value: string, currency: string) {
 }
 
 export default function ComptesPage() {
-  const [userId, setUserId] = useState('');
+  const router = useRouter();
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -32,10 +33,14 @@ export default function ComptesPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(USER_ID_STORAGE_KEY);
-    if (stored) setUserId(stored);
+    const stored = getStoredAccessToken();
+    if (!stored) {
+      router.replace('/connexion');
+      return;
+    }
+    setAccessToken(stored);
     setSessionEmail(getStoredUserEmail());
-  }, []);
+  }, [router]);
 
   async function handleLogout() {
     const refreshToken = getStoredRefreshToken();
@@ -45,24 +50,19 @@ export default function ComptesPage() {
       // Le token est peut-être déjà expiré/révoqué côté serveur — on nettoie quand même localement.
     }
     clearSession();
-    setSessionEmail(null);
+    router.replace('/connexion');
   }
 
   useEffect(() => {
-    if (!userId) {
-      setAccounts([]);
-      return;
-    }
+    if (!accessToken) return;
+    void refreshAccounts(accessToken);
+  }, [accessToken]);
 
-    window.localStorage.setItem(USER_ID_STORAGE_KEY, userId);
-    void refreshAccounts(userId);
-  }, [userId]);
-
-  async function refreshAccounts(forUserId: string) {
+  async function refreshAccounts(token: string) {
     setLoading(true);
     setError(null);
     try {
-      setAccounts(await listAccounts(forUserId));
+      setAccounts(await listAccounts(token));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
@@ -72,16 +72,12 @@ export default function ComptesPage() {
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault();
-    if (!userId) {
-      setError('Renseignez un identifiant utilisateur (voir apps/api : npm run prisma:seed).');
-      return;
-    }
+    if (!accessToken) return;
 
     setSubmitting(true);
     setError(null);
     try {
-      await createAccount({
-        userId,
+      await createAccount(accessToken, {
         name,
         type,
         ownership,
@@ -90,7 +86,7 @@ export default function ComptesPage() {
       });
       setName('');
       setOpeningBalance('');
-      await refreshAccounts(userId);
+      await refreshAccounts(accessToken);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
@@ -99,13 +95,22 @@ export default function ComptesPage() {
   }
 
   async function handleToggleActive(account: AccountDto) {
+    if (!accessToken) return;
     setError(null);
     try {
-      await updateAccount(account.id, userId, { isActive: !account.isActive });
-      await refreshAccounts(userId);
+      await updateAccount(account.id, accessToken, { isActive: !account.isActive });
+      await refreshAccounts(accessToken);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     }
+  }
+
+  if (!accessToken) {
+    return (
+      <main className="mx-auto max-w-2xl p-8">
+        <p className="text-sm text-muted-foreground">Redirection vers la connexion…</p>
+      </main>
+    );
   }
 
   return (
@@ -136,39 +141,13 @@ export default function ComptesPage() {
         </p>
       </div>
 
-      {sessionEmail ? (
-        <div className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
-          <span>
-            Connecté : <span className="font-medium">{sessionEmail}</span>
-          </span>
-          <button type="button" onClick={handleLogout} className="text-xs text-muted-foreground underline">
-            Se déconnecter
-          </button>
-        </div>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          <Link href="/connexion" className="underline">
-            Se connecter
-          </Link>{' '}
-          pour remplir automatiquement votre identifiant, ou saisissez-le manuellement ci-dessous.
-        </p>
-      )}
-
-      <div className="flex flex-col gap-2">
-        <label htmlFor="userId" className="text-sm font-medium">
-          Identifiant utilisateur
-        </label>
-        <input
-          id="userId"
-          value={userId}
-          onChange={(event) => setUserId(event.target.value.trim())}
-          placeholder="uuid — via npm run prisma:seed --workspace=apps/api"
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-        />
-        <p className="text-xs text-muted-foreground">
-          Provisoire : les autres pages ne vérifient pas encore le token, elles font confiance à cet identifiant — se
-          connecter le remplit automatiquement.
-        </p>
+      <div className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
+        <span>
+          Connecté : <span className="font-medium">{sessionEmail}</span>
+        </span>
+        <button type="button" onClick={handleLogout} className="text-xs text-muted-foreground underline">
+          Se déconnecter
+        </button>
       </div>
 
       {error && (
@@ -251,9 +230,8 @@ export default function ComptesPage() {
       <div className="flex flex-col gap-2">
         <h2 className="font-medium">Vos comptes {loading && '(chargement…)'}</h2>
 
-        {!userId && <p className="text-sm text-muted-foreground">Renseignez un identifiant utilisateur ci-dessus.</p>}
-        {userId && !loading && accounts.length === 0 && (
-          <p className="text-sm text-muted-foreground">Aucun compte pour cet utilisateur.</p>
+        {!loading && accounts.length === 0 && (
+          <p className="text-sm text-muted-foreground">Aucun compte pour le moment.</p>
         )}
 
         <ul className="flex flex-col gap-2">

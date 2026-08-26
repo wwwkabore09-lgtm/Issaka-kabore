@@ -4,11 +4,13 @@ import { Prisma } from '@prisma/client';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { authHeader, registerTestUser } from './utils/auth';
 
 describe('BudgetsController (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let userId: string;
+  let accessToken: string;
   let accountId: string;
   let expenseCategoryId: string;
   let incomeCategoryId: string;
@@ -24,10 +26,9 @@ describe('BudgetsController (e2e)', () => {
 
     prisma = app.get(PrismaService);
 
-    const user = await prisma.user.create({
-      data: { email: `budgets-e2e-${Date.now()}@finza.test`, fullName: 'Test User' },
-    });
-    userId = user.id;
+    const user = await registerTestUser(app, { email: `budgets-e2e-${Date.now()}@finza.test`, fullName: 'Test User' });
+    userId = user.userId;
+    accessToken = user.accessToken;
 
     const [expenseCategory, incomeCategory] = await Promise.all([
       prisma.category.create({ data: { userId, key: 'alimentation-test', label: 'Alimentation (test)', kind: 'expense' } }),
@@ -38,7 +39,8 @@ describe('BudgetsController (e2e)', () => {
 
     const accountRes = await request(app.getHttpServer())
       .post('/accounts')
-      .send({ userId, name: 'Compte budget', type: 'cash', currency: 'XOF', openingBalance: '200000' });
+      .set(...authHeader(accessToken))
+      .send({ name: 'Compte budget', type: 'cash', currency: 'XOF', openingBalance: '200000' });
     accountId = accountRes.body.id;
   });
 
@@ -104,7 +106,8 @@ describe('BudgetsController (e2e)', () => {
   it('met à jour puis supprime un budget', async () => {
     const created = await request(app.getHttpServer())
       .post('/accounts')
-      .send({ userId, name: 'Autre compte', type: 'cash', currency: 'XOF' });
+      .set(...authHeader(accessToken))
+      .send({ name: 'Autre compte', type: 'cash', currency: 'XOF' });
     const otherAccountId = created.body.id;
 
     const budgetRes = await request(app.getHttpServer())

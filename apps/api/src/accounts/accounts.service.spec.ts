@@ -64,8 +64,7 @@ describe('AccountsService', () => {
     it("crée le compte et une écriture de grand livre 'opening' pour le solde initial", async () => {
       prisma.account.create.mockResolvedValue(baseAccount);
 
-      const result = await service.create({
-        userId,
+      const result = await service.create(userId, {
         name: 'Orange Money',
         type: 'orange_money',
         currency: 'XOF',
@@ -99,8 +98,7 @@ describe('AccountsService', () => {
         currentBalance: new Prisma.Decimal('0'),
       });
 
-      const result = await service.create({
-        userId,
+      const result = await service.create(userId, {
         name: 'Espèces',
         type: 'cash',
         currency: 'XOF',
@@ -113,8 +111,7 @@ describe('AccountsService', () => {
       const future = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
       await expect(
-        service.create({
-          userId,
+        service.create(userId, {
           name: 'Orange Money',
           type: 'orange_money',
           currency: 'XOF',

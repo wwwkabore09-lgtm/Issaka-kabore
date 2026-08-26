@@ -3,11 +3,13 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { authHeader, registerTestUser } from './utils/auth';
 
 describe('ReportsController (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let userId: string;
+  let accessToken: string;
   let accountId: string;
   let expenseCategoryId: string;
   let incomeCategoryId: string;
@@ -23,10 +25,9 @@ describe('ReportsController (e2e)', () => {
 
     prisma = app.get(PrismaService);
 
-    const user = await prisma.user.create({
-      data: { email: `reports-e2e-${Date.now()}@finza.test`, fullName: 'Test User' },
-    });
-    userId = user.id;
+    const user = await registerTestUser(app, { email: `reports-e2e-${Date.now()}@finza.test`, fullName: 'Test User' });
+    userId = user.userId;
+    accessToken = user.accessToken;
 
     const [expenseCategory, incomeCategory] = await Promise.all([
       prisma.category.create({ data: { userId, key: 'alimentation-report-test', label: 'Alimentation', kind: 'expense' } }),
@@ -37,7 +38,8 @@ describe('ReportsController (e2e)', () => {
 
     const accountRes = await request(app.getHttpServer())
       .post('/accounts')
-      .send({ userId, name: 'Compte rapport', type: 'cash', currency: 'XOF', openingBalance: '10000' });
+      .set(...authHeader(accessToken))
+      .send({ name: 'Compte rapport', type: 'cash', currency: 'XOF', openingBalance: '10000' });
     accountId = accountRes.body.id;
 
     await request(app.getHttpServer())

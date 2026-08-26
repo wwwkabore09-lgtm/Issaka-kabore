@@ -33,7 +33,6 @@ export interface AccountDto {
 }
 
 export interface CreateAccountRequest {
-  userId: string;
   name: string;
   type: AccountType;
   ownership?: AccountOwnership;

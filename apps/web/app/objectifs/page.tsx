@@ -12,6 +12,7 @@ import {
   listGoalContributions,
   listGoals,
 } from '@/lib/api';
+import { getStoredAccessToken } from '@/lib/auth-session';
 
 const USER_ID_STORAGE_KEY = 'finza_demo_user_id';
 
@@ -52,7 +53,13 @@ export default function ObjectifsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [goalsRes, accountsRes] = await Promise.all([listGoals(userId), listAccounts(userId)]);
+      const accessToken = getStoredAccessToken();
+      const [goalsRes, accountsRes] = await Promise.all([
+        listGoals(userId),
+        // Le domaine Comptes exige désormais un vrai token JWT ; sans session connectée,
+        // le sélecteur de compte reste simplement vide (les objectifs restent utilisables).
+        accessToken ? listAccounts(accessToken) : Promise.resolve([]),
+      ]);
       setGoals(goalsRes);
       setAccounts(accountsRes);
     } catch (err) {

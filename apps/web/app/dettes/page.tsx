@@ -13,6 +13,7 @@ import {
   listDebtPayments,
   listDebts,
 } from '@/lib/api';
+import { getStoredAccessToken } from '@/lib/auth-session';
 
 const USER_ID_STORAGE_KEY = 'finza_demo_user_id';
 
@@ -65,7 +66,13 @@ export default function DettesPage() {
     setLoading(true);
     setError(null);
     try {
-      const [debtsRes, accountsRes] = await Promise.all([listDebts(userId), listAccounts(userId)]);
+      const accessToken = getStoredAccessToken();
+      const [debtsRes, accountsRes] = await Promise.all([
+        listDebts(userId),
+        // Le domaine Comptes exige désormais un vrai token JWT ; sans session connectée,
+        // le sélecteur de compte reste simplement vide (les dettes restent utilisables).
+        accessToken ? listAccounts(accessToken) : Promise.resolve([]),
+      ]);
       setDebts(debtsRes);
       setAccounts(accountsRes);
     } catch (err) {

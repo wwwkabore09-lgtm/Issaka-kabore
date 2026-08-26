@@ -59,28 +59,38 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export function listAccounts(userId: string) {
-  return apiFetch<AccountDto[]>(`/accounts?userId=${encodeURIComponent(userId)}`);
+function authHeaders(accessToken: string): HeadersInit {
+  return { Authorization: `Bearer ${accessToken}` };
 }
 
-export function createAccount(payload: CreateAccountRequest) {
-  return apiFetch<AccountDto>('/accounts', { method: 'POST', body: JSON.stringify(payload) });
+export function listAccounts(accessToken: string) {
+  return apiFetch<AccountDto[]>('/accounts', { headers: authHeaders(accessToken) });
 }
 
-export function updateAccount(id: string, userId: string, payload: UpdateAccountRequest) {
-  return apiFetch<AccountDto>(`/accounts/${id}?userId=${encodeURIComponent(userId)}`, {
-    method: 'PATCH',
+export function createAccount(accessToken: string, payload: CreateAccountRequest) {
+  return apiFetch<AccountDto>('/accounts', {
+    method: 'POST',
     body: JSON.stringify(payload),
+    headers: authHeaders(accessToken),
   });
 }
 
-export function getAccount(id: string, userId: string) {
-  return apiFetch<AccountDto>(`/accounts/${id}?userId=${encodeURIComponent(userId)}`);
+export function updateAccount(id: string, accessToken: string, payload: UpdateAccountRequest) {
+  return apiFetch<AccountDto>(`/accounts/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+    headers: authHeaders(accessToken),
+  });
 }
 
-export function getAccountBalance(id: string, userId: string, asOf?: string) {
-  const query = new URLSearchParams({ userId, ...(asOf ? { asOf } : {}) });
-  return apiFetch<AccountBalanceResponse>(`/accounts/${id}/balance?${query.toString()}`);
+export function getAccount(id: string, accessToken: string) {
+  return apiFetch<AccountDto>(`/accounts/${id}`, { headers: authHeaders(accessToken) });
+}
+
+export function getAccountBalance(id: string, accessToken: string, asOf?: string) {
+  const query = new URLSearchParams(asOf ? { asOf } : {});
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return apiFetch<AccountBalanceResponse>(`/accounts/${id}/balance${suffix}`, { headers: authHeaders(accessToken) });
 }
 
 export function listCategories(userId: string) {

@@ -3,6 +3,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { authHeader, registerTestUser } from './utils/auth';
 
 describe('GoalsController (e2e)', () => {
   let app: INestApplication;
@@ -21,14 +22,13 @@ describe('GoalsController (e2e)', () => {
 
     prisma = app.get(PrismaService);
 
-    const user = await prisma.user.create({
-      data: { email: `goals-e2e-${Date.now()}@finza.test`, fullName: 'Test User' },
-    });
-    userId = user.id;
+    const user = await registerTestUser(app, { email: `goals-e2e-${Date.now()}@finza.test`, fullName: 'Test User' });
+    userId = user.userId;
 
     const accountRes = await request(app.getHttpServer())
       .post('/accounts')
-      .send({ userId, name: 'Compte épargne', type: 'cash', currency: 'XOF' });
+      .set(...authHeader(user.accessToken))
+      .send({ name: 'Compte épargne', type: 'cash', currency: 'XOF' });
     accountId = accountRes.body.id;
   });
 

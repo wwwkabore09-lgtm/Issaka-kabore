@@ -3,11 +3,13 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { authHeader, registerTestUser } from './utils/auth';
 
 describe('TransactionsController (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let userId: string;
+  let accessToken: string;
   let accountAId: string;
   let accountBId: string;
   let incomeCategoryId: string;
@@ -24,10 +26,9 @@ describe('TransactionsController (e2e)', () => {
 
     prisma = app.get(PrismaService);
 
-    const user = await prisma.user.create({
-      data: { email: `transactions-e2e-${Date.now()}@finza.test`, fullName: 'Test User' },
-    });
-    userId = user.id;
+    const user = await registerTestUser(app, { email: `transactions-e2e-${Date.now()}@finza.test`, fullName: 'Test User' });
+    userId = user.userId;
+    accessToken = user.accessToken;
 
     const [income, expense] = await Promise.all([
       prisma.category.create({ data: { userId, key: 'salaire-test', label: 'Salaire (test)', kind: 'income' } }),
@@ -39,10 +40,12 @@ describe('TransactionsController (e2e)', () => {
     const [accountA, accountB] = await Promise.all([
       request(app.getHttpServer())
         .post('/accounts')
-        .send({ userId, name: 'Compte A', type: 'orange_money', currency: 'XOF', openingBalance: '100000' }),
+        .set(...authHeader(accessToken))
+        .send({ name: 'Compte A', type: 'orange_money', currency: 'XOF', openingBalance: '100000' }),
       request(app.getHttpServer())
         .post('/accounts')
-        .send({ userId, name: 'Compte B', type: 'bank_account', currency: 'XOF' }),
+        .set(...authHeader(accessToken))
+        .send({ name: 'Compte B', type: 'bank_account', currency: 'XOF' }),
     ]);
     accountAId = accountA.body.id;
     accountBId = accountB.body.id;
@@ -74,7 +77,7 @@ describe('TransactionsController (e2e)', () => {
 
     const balance = await request(app.getHttpServer())
       .get(`/accounts/${accountAId}/balance`)
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .expect(200);
 
     expect(balance.body.balance).toBe('85000.00');
@@ -95,7 +98,7 @@ describe('TransactionsController (e2e)', () => {
 
     const balance = await request(app.getHttpServer())
       .get(`/accounts/${accountAId}/balance`)
-      .query({ userId })
+      .set(...authHeader(accessToken))
       .expect(200);
 
     expect(balance.body.balance).toBe('105000.00');
@@ -122,8 +125,8 @@ describe('TransactionsController (e2e)', () => {
       .expect(201);
 
     const [balanceA, balanceB] = await Promise.all([
-      request(app.getHttpServer()).get(`/accounts/${accountAId}/balance`).query({ userId }).expect(200),
-      request(app.getHttpServer()).get(`/accounts/${accountBId}/balance`).query({ userId }).expect(200),
+      request(app.getHttpServer()).get(`/accounts/${accountAId}/balance`).set(...authHeader(accessToken)).expect(200),
+      request(app.getHttpServer()).get(`/accounts/${accountBId}/balance`).set(...authHeader(accessToken)).expect(200),
     ]);
 
     expect(balanceA.body.balance).toBe('75000.00');

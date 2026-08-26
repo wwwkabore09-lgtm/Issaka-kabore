@@ -3,13 +3,16 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { authHeader, registerTestUser } from './utils/auth';
 
 describe('FamiliesController (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let ownerId: string;
+  let ownerToken: string;
   let memberId: string;
   let outsiderId: string;
+  let outsiderToken: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -23,13 +26,15 @@ describe('FamiliesController (e2e)', () => {
     prisma = app.get(PrismaService);
 
     const [owner, member, outsider] = await Promise.all([
-      prisma.user.create({ data: { email: `families-owner-${Date.now()}@finza.test`, fullName: 'Propriétaire' } }),
-      prisma.user.create({ data: { email: `families-member-${Date.now()}@finza.test`, fullName: 'Membre' } }),
-      prisma.user.create({ data: { email: `families-outsider-${Date.now()}@finza.test`, fullName: 'Externe' } }),
+      registerTestUser(app, { email: `families-owner-${Date.now()}@finza.test`, fullName: 'Propriétaire' }),
+      registerTestUser(app, { email: `families-member-${Date.now()}@finza.test`, fullName: 'Membre' }),
+      registerTestUser(app, { email: `families-outsider-${Date.now()}@finza.test`, fullName: 'Externe' }),
     ]);
-    ownerId = owner.id;
-    memberId = member.id;
-    outsiderId = outsider.id;
+    ownerId = owner.userId;
+    ownerToken = owner.accessToken;
+    memberId = member.userId;
+    outsiderId = outsider.userId;
+    outsiderToken = outsider.accessToken;
   });
 
   afterAll(async () => {
@@ -83,7 +88,8 @@ describe('FamiliesController (e2e)', () => {
     // Le propriétaire crée un compte personnel, non partagé par défaut.
     const accountRes = await request(app.getHttpServer())
       .post('/accounts')
-      .send({ userId: ownerId, name: 'Compte perso propriétaire', type: 'cash', currency: 'XOF', openingBalance: '50000' })
+      .set(...authHeader(ownerToken))
+      .send({ name: 'Compte perso propriétaire', type: 'cash', currency: 'XOF', openingBalance: '50000' })
       .expect(201);
     expect(accountRes.body.isSharedWithFamily).toBe(false);
 
@@ -97,7 +103,7 @@ describe('FamiliesController (e2e)', () => {
     // Le propriétaire partage explicitement le compte.
     await request(app.getHttpServer())
       .patch(`/accounts/${accountRes.body.id}`)
-      .query({ userId: ownerId })
+      .set(...authHeader(ownerToken))
       .send({ isSharedWithFamily: true })
       .expect(200);
 
@@ -119,12 +125,13 @@ describe('FamiliesController (e2e)', () => {
   it("rejette le partage d'un compte pour un utilisateur sans famille", async () => {
     const accountRes = await request(app.getHttpServer())
       .post('/accounts')
-      .send({ userId: outsiderId, name: 'Compte externe', type: 'cash', currency: 'XOF' })
+      .set(...authHeader(outsiderToken))
+      .send({ name: 'Compte externe', type: 'cash', currency: 'XOF' })
       .expect(201);
 
     await request(app.getHttpServer())
       .patch(`/accounts/${accountRes.body.id}`)
-      .query({ userId: outsiderId })
+      .set(...authHeader(outsiderToken))
       .send({ isSharedWithFamily: true })
       .expect(400);
   });

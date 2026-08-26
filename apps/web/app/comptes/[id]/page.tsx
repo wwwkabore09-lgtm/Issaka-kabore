@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import type {
   AccountDto,
   BudgetProgressDto,
@@ -27,8 +27,7 @@ import {
   updateAccount,
 } from '@/lib/api';
 import { ACCOUNT_TYPE_LABELS } from '@/lib/account-labels';
-
-const USER_ID_STORAGE_KEY = 'finza_demo_user_id';
+import { getStoredAccessToken, getStoredUserId } from '@/lib/auth-session';
 
 const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   income: 'Revenu',
@@ -53,8 +52,10 @@ function endOfMonthIso() {
 
 export default function CompteDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const accountId = params.id;
 
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [userId, setUserId] = useState('');
   const [account, setAccount] = useState<AccountDto | null>(null);
   const [otherAccounts, setOtherAccounts] = useState<AccountDto[]>([]);
@@ -77,17 +78,22 @@ export default function CompteDetailPage() {
   const [submittingBudget, setSubmittingBudget] = useState(false);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(USER_ID_STORAGE_KEY);
-    if (stored) setUserId(stored);
-  }, []);
+    const storedToken = getStoredAccessToken();
+    if (!storedToken) {
+      router.replace('/connexion');
+      return;
+    }
+    setAccessToken(storedToken);
+    setUserId(getStoredUserId() ?? '');
+  }, [router]);
 
   useEffect(() => {
-    if (!userId || !accountId) return;
+    if (!accessToken || !userId || !accountId) return;
     void refreshAll();
-    // refreshAll est redéfini à chaque rendu mais ne dépend que de userId/accountId,
+    // refreshAll est redéfini à chaque rendu mais ne dépend que de accessToken/userId/accountId,
     // déjà listés ci-dessous.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, accountId]);
+  }, [accessToken, userId, accountId]);
 
   const categoriesForType = useMemo(
     () => categories.filter((c) => c.kind === (type === 'income' ? 'income' : 'expense')),
@@ -100,12 +106,13 @@ export default function CompteDetailPage() {
   }, [categories, budgets]);
 
   async function refreshAll() {
+    if (!accessToken) return;
     setLoading(true);
     setError(null);
     try {
       const [accountRes, accountsRes, categoriesRes, transactionsRes, summaryRes, budgetsRes] = await Promise.all([
-        getAccount(accountId, userId),
-        listAccounts(userId),
+        getAccount(accountId, accessToken),
+        listAccounts(accessToken),
         listCategories(userId),
         listTransactions(accountId, userId),
         getTransactionSummary(accountId, userId, startOfMonthIso(), endOfMonthIso()),
@@ -151,10 +158,10 @@ export default function CompteDetailPage() {
   }
 
   async function handleToggleShare() {
-    if (!account) return;
+    if (!account || !accessToken) return;
     setError(null);
     try {
-      await updateAccount(accountId, userId, { isSharedWithFamily: !account.isSharedWithFamily });
+      await updateAccount(accountId, accessToken, { isSharedWithFamily: !account.isSharedWithFamily });
       await refreshAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
@@ -187,16 +194,10 @@ export default function CompteDetailPage() {
     }
   }
 
-  if (!userId) {
+  if (!accessToken) {
     return (
       <main className="mx-auto max-w-2xl p-8">
-        <p className="text-sm text-muted-foreground">
-          Renseignez d&apos;abord votre identifiant utilisateur sur la page{' '}
-          <Link href="/comptes" className="underline">
-            Comptes
-          </Link>
-          .
-        </p>
+        <p className="text-sm text-muted-foreground">Redirection vers la connexion…</p>
       </main>
     );
   }
