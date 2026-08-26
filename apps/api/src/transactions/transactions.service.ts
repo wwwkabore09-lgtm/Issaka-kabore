@@ -12,7 +12,7 @@ export class TransactionsService {
     private readonly accountsService: AccountsService,
   ) {}
 
-  async create(dto: CreateTransactionDto): Promise<TransactionDto> {
+  async create(userId: string, dto: CreateTransactionDto): Promise<TransactionDto> {
     const amount = new Prisma.Decimal(dto.amount);
     if (amount.lte(0)) {
       throw new BadRequestException('amount doit être strictement positif');
@@ -23,7 +23,7 @@ export class TransactionsService {
       throw new BadRequestException('occurredAt ne peut pas être dans le futur');
     }
 
-    const sourceAccount = await this.accountsService.getOwnedAccountOrThrow(dto.accountId, dto.userId);
+    const sourceAccount = await this.accountsService.getOwnedAccountOrThrow(dto.accountId, userId);
 
     if (dto.type === 'transfer') {
       if (dto.categoryId) {
@@ -38,7 +38,7 @@ export class TransactionsService {
 
       const destinationAccount = await this.accountsService.getOwnedAccountOrThrow(
         dto.transferToAccountId,
-        dto.userId,
+        userId,
       );
 
       if (destinationAccount.currency !== sourceAccount.currency) {
@@ -75,7 +75,7 @@ export class TransactionsService {
     }
 
     const category = await this.prisma.category.findUnique({ where: { id: dto.categoryId } });
-    if (!category || (category.userId !== null && category.userId !== dto.userId)) {
+    if (!category || (category.userId !== null && category.userId !== userId)) {
       throw new NotFoundException('Catégorie introuvable');
     }
     if (category.kind !== dto.type) {

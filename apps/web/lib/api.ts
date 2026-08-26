@@ -97,18 +97,24 @@ export function listCategories(userId: string) {
   return apiFetch<CategoryDto[]>(`/categories?userId=${encodeURIComponent(userId)}`);
 }
 
-export function listTransactions(accountId: string, userId: string) {
-  const query = new URLSearchParams({ userId, accountId });
-  return apiFetch<TransactionDto[]>(`/transactions?${query.toString()}`);
+export function listTransactions(accountId: string, accessToken: string) {
+  const query = new URLSearchParams({ accountId });
+  return apiFetch<TransactionDto[]>(`/transactions?${query.toString()}`, { headers: authHeaders(accessToken) });
 }
 
-export function createTransaction(payload: CreateTransactionRequest) {
-  return apiFetch<TransactionDto>('/transactions', { method: 'POST', body: JSON.stringify(payload) });
+export function createTransaction(accessToken: string, payload: CreateTransactionRequest) {
+  return apiFetch<TransactionDto>('/transactions', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    headers: authHeaders(accessToken),
+  });
 }
 
-export function getTransactionSummary(accountId: string, userId: string, from: string, to: string) {
-  const query = new URLSearchParams({ userId, accountId, from, to });
-  return apiFetch<TransactionSummaryDto>(`/transactions/summary?${query.toString()}`);
+export function getTransactionSummary(accountId: string, accessToken: string, from: string, to: string) {
+  const query = new URLSearchParams({ accountId, from, to });
+  return apiFetch<TransactionSummaryDto>(`/transactions/summary?${query.toString()}`, {
+    headers: authHeaders(accessToken),
+  });
 }
 
 export function listBudgets(accountId: string, userId: string) {

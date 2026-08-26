@@ -60,11 +60,19 @@ describe('TransactionsController (e2e)', () => {
     await app.close();
   });
 
+  it('rejette les requêtes sans access token', async () => {
+    await request(app.getHttpServer()).get('/transactions').query({ accountId: accountAId }).expect(401);
+    await request(app.getHttpServer())
+      .post('/transactions')
+      .send({ accountId: accountAId, type: 'expense', amount: '1000', categoryId: expenseCategoryId })
+      .expect(401);
+  });
+
   it('une dépense diminue le solde du compte', async () => {
     const res = await request(app.getHttpServer())
       .post('/transactions')
+      .set(...authHeader(accessToken))
       .send({
-        userId,
         accountId: accountAId,
         type: 'expense',
         amount: '15000',
@@ -86,8 +94,8 @@ describe('TransactionsController (e2e)', () => {
   it('un revenu augmente le solde du compte', async () => {
     await request(app.getHttpServer())
       .post('/transactions')
+      .set(...authHeader(accessToken))
       .send({
-        userId,
         accountId: accountAId,
         type: 'income',
         amount: '20000',
@@ -107,15 +115,16 @@ describe('TransactionsController (e2e)', () => {
   it('rejette une transaction income/expense sans categoryId', async () => {
     await request(app.getHttpServer())
       .post('/transactions')
-      .send({ userId, accountId: accountAId, type: 'expense', amount: '1000' })
+      .set(...authHeader(accessToken))
+      .send({ accountId: accountAId, type: 'expense', amount: '1000' })
       .expect(400);
   });
 
   it('un transfert déplace le solde entre deux comptes et est exclu du résumé revenus/dépenses', async () => {
     await request(app.getHttpServer())
       .post('/transactions')
+      .set(...authHeader(accessToken))
       .send({
-        userId,
         accountId: accountAId,
         type: 'transfer',
         amount: '30000',
@@ -134,7 +143,8 @@ describe('TransactionsController (e2e)', () => {
 
     const summary = await request(app.getHttpServer())
       .get('/transactions/summary')
-      .query({ userId, accountId: accountAId, from: '2026-01-01T00:00:00.000Z', to: '2026-12-31T23:59:59.000Z' })
+      .set(...authHeader(accessToken))
+      .query({ accountId: accountAId, from: '2026-01-01T00:00:00.000Z', to: '2026-12-31T23:59:59.000Z' })
       .expect(200);
 
     // 20000 income - 15000 expense = 5000, le transfert de 30000 ne doit apparaître nulle part ici.
@@ -153,7 +163,8 @@ describe('TransactionsController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/transactions')
-      .send({ userId, accountId: accountAId, type: 'transfer', amount: '1000', transferToAccountId: otherAccount.id })
+      .set(...authHeader(accessToken))
+      .send({ accountId: accountAId, type: 'transfer', amount: '1000', transferToAccountId: otherAccount.id })
       .expect(404);
 
     await prisma.account.delete({ where: { id: otherAccount.id } });
@@ -163,7 +174,8 @@ describe('TransactionsController (e2e)', () => {
   it('liste les transactions du compte, plus récentes en premier', async () => {
     const res = await request(app.getHttpServer())
       .get('/transactions')
-      .query({ userId, accountId: accountAId })
+      .set(...authHeader(accessToken))
+      .query({ accountId: accountAId })
       .expect(200);
 
     expect(res.body.length).toBeGreaterThanOrEqual(3);

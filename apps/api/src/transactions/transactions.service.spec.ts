@@ -59,8 +59,7 @@ describe('TransactionsService', () => {
       prisma.category.findUnique.mockResolvedValue({ id: categoryId, userId: null, kind: 'expense' });
       prisma.transaction.create.mockResolvedValue(baseTransaction);
 
-      const result = await service.create({
-        userId,
+      const result = await service.create(userId, {
         accountId,
         type: 'expense',
         amount: '3000',
@@ -88,7 +87,7 @@ describe('TransactionsService', () => {
       prisma.category.findUnique.mockResolvedValue({ id: categoryId, userId: null, kind: 'income' });
 
       await expect(
-        service.create({ userId, accountId, type: 'expense', amount: '1000', categoryId }),
+        service.create(userId, { accountId, type: 'expense', amount: '1000', categoryId }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
@@ -96,13 +95,13 @@ describe('TransactionsService', () => {
       prisma.category.findUnique.mockResolvedValue({ id: categoryId, userId: 'un-autre-user', kind: 'expense' });
 
       await expect(
-        service.create({ userId, accountId, type: 'expense', amount: '1000', categoryId }),
+        service.create(userId, { accountId, type: 'expense', amount: '1000', categoryId }),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
     it('rejette un montant à zéro ou négatif', async () => {
       await expect(
-        service.create({ userId, accountId, type: 'expense', amount: '0', categoryId }),
+        service.create(userId, { accountId, type: 'expense', amount: '0', categoryId }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
@@ -117,8 +116,7 @@ describe('TransactionsService', () => {
         amount: new Prisma.Decimal('5000.00'),
       });
 
-      await service.create({
-        userId,
+      await service.create(userId, {
         accountId,
         type: 'transfer',
         amount: '5000',
@@ -138,14 +136,13 @@ describe('TransactionsService', () => {
       );
 
       await expect(
-        service.create({ userId, accountId, type: 'transfer', amount: '1000', transferToAccountId: otherAccountId }),
+        service.create(userId, { accountId, type: 'transfer', amount: '1000', transferToAccountId: otherAccountId }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('rejette un transfert avec une categoryId fournie', async () => {
       await expect(
-        service.create({
-          userId,
+        service.create(userId, {
           accountId,
           type: 'transfer',
           amount: '1000',
@@ -157,7 +154,7 @@ describe('TransactionsService', () => {
 
     it('rejette un transfert vers le même compte', async () => {
       await expect(
-        service.create({ userId, accountId, type: 'transfer', amount: '1000', transferToAccountId: accountId }),
+        service.create(userId, { accountId, type: 'transfer', amount: '1000', transferToAccountId: accountId }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
   });

@@ -76,8 +76,8 @@ describe('BudgetsController (e2e)', () => {
   it('reflète les dépenses de la période dans la progression du budget', async () => {
     await request(app.getHttpServer())
       .post('/transactions')
+      .set(...authHeader(accessToken))
       .send({
-        userId,
         accountId,
         type: 'expense',
         amount: '15000',

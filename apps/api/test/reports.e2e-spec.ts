@@ -48,8 +48,8 @@ describe('ReportsController (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/transactions')
+      .set(...authHeader(accessToken))
       .send({
-        userId,
         accountId,
         type: 'income',
         amount: '80000',
@@ -58,8 +58,8 @@ describe('ReportsController (e2e)', () => {
       });
     await request(app.getHttpServer())
       .post('/transactions')
+      .set(...authHeader(accessToken))
       .send({
-        userId,
         accountId,
         type: 'expense',
         amount: '15000',

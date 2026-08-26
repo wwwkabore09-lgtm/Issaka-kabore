@@ -2,10 +2,6 @@ import { TRANSACTION_TYPES, type TransactionType } from '@finza/shared-types';
 import { IsIn, IsISO8601, IsOptional, IsString, IsUUID, Matches, MaxLength } from 'class-validator';
 
 export class CreateTransactionDto {
-  // Temporaire : tant que le domaine auth n'existe pas (cf. domaine Accounts).
-  @IsUUID()
-  userId!: string;
-
   @IsUUID()
   accountId!: string;
 

@@ -114,8 +114,8 @@ export default function CompteDetailPage() {
         getAccount(accountId, accessToken),
         listAccounts(accessToken),
         listCategories(userId),
-        listTransactions(accountId, userId),
-        getTransactionSummary(accountId, userId, startOfMonthIso(), endOfMonthIso()),
+        listTransactions(accountId, accessToken),
+        getTransactionSummary(accountId, accessToken, startOfMonthIso(), endOfMonthIso()),
         listBudgets(accountId, userId),
       ]);
       setAccount(accountRes);
@@ -170,11 +170,11 @@ export default function CompteDetailPage() {
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault();
+    if (!accessToken) return;
     setSubmitting(true);
     setError(null);
     try {
-      await createTransaction({
-        userId,
+      await createTransaction(accessToken, {
         accountId,
         type,
         amount,
