@@ -5,8 +5,9 @@ import { useEffect, useState } from 'react';
 import { ACCOUNT_OWNERSHIPS, ACCOUNT_TYPES, type AccountDto, type AccountOwnership, type AccountType } from '@finza/shared-types';
 import { COUNTRIES, CURRENCIES, LAUNCH_COUNTRY, type CurrencyCode } from '@finza/config';
 import { cn } from '@finza/ui';
-import { createAccount, listAccounts, updateAccount } from '@/lib/api';
+import { createAccount, listAccounts, logout as apiLogout, updateAccount } from '@/lib/api';
 import { ACCOUNT_TYPE_LABELS } from '@/lib/account-labels';
+import { clearSession, getStoredRefreshToken, getStoredUserEmail } from '@/lib/auth-session';
 
 const USER_ID_STORAGE_KEY = 'finza_demo_user_id';
 const DEFAULT_CURRENCY = COUNTRIES[LAUNCH_COUNTRY].currency;
@@ -18,6 +19,7 @@ function formatBalance(value: string, currency: string) {
 
 export default function ComptesPage() {
   const [userId, setUserId] = useState('');
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +34,19 @@ export default function ComptesPage() {
   useEffect(() => {
     const stored = window.localStorage.getItem(USER_ID_STORAGE_KEY);
     if (stored) setUserId(stored);
+    setSessionEmail(getStoredUserEmail());
   }, []);
+
+  async function handleLogout() {
+    const refreshToken = getStoredRefreshToken();
+    try {
+      if (refreshToken) await apiLogout(refreshToken);
+    } catch {
+      // Le token est peut-être déjà expiré/révoqué côté serveur — on nettoie quand même localement.
+    }
+    clearSession();
+    setSessionEmail(null);
+  }
 
   useEffect(() => {
     if (!userId) {
@@ -122,6 +136,24 @@ export default function ComptesPage() {
         </p>
       </div>
 
+      {sessionEmail ? (
+        <div className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
+          <span>
+            Connecté : <span className="font-medium">{sessionEmail}</span>
+          </span>
+          <button type="button" onClick={handleLogout} className="text-xs text-muted-foreground underline">
+            Se déconnecter
+          </button>
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          <Link href="/connexion" className="underline">
+            Se connecter
+          </Link>{' '}
+          pour remplir automatiquement votre identifiant, ou saisissez-le manuellement ci-dessous.
+        </p>
+      )}
+
       <div className="flex flex-col gap-2">
         <label htmlFor="userId" className="text-sm font-medium">
           Identifiant utilisateur
@@ -134,7 +166,8 @@ export default function ComptesPage() {
           className="rounded-md border border-input bg-background px-3 py-2 text-sm"
         />
         <p className="text-xs text-muted-foreground">
-          Provisoire : tant que le domaine auth n&apos;existe pas, l&apos;identifiant est saisi manuellement.
+          Provisoire : les autres pages ne vérifient pas encore le token, elles font confiance à cet identifiant — se
+          connecter le remplit automatiquement.
         </p>
       </div>
 

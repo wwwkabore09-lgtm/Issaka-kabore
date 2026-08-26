@@ -12,6 +12,9 @@ import type {
   CreateGoalRequest,
   CreateTransactionRequest,
   AddFamilyMemberRequest,
+  AuthResponseDto,
+  AuthTokensDto,
+  AuthUserDto,
   CreateFamilyRequest,
   CreateSubscriptionRequest,
   DebtPaymentDto,
@@ -20,6 +23,8 @@ import type {
   GenerateReportRequest,
   GoalContributionDto,
   GoalProgressDto,
+  LoginRequest,
+  RegisterRequest,
   ReportDto,
   SharedAccountDto,
   SubscriptionDto,
@@ -242,4 +247,24 @@ export function deleteFamily(familyId: string, userId: string) {
 
 export function listSharedAccounts(familyId: string, userId: string) {
   return apiFetch<SharedAccountDto[]>(`/families/${familyId}/shared-accounts?userId=${encodeURIComponent(userId)}`);
+}
+
+export function register(payload: RegisterRequest) {
+  return apiFetch<AuthResponseDto>('/auth/register', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export function login(payload: LoginRequest) {
+  return apiFetch<AuthResponseDto>('/auth/login', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export function refreshTokens(refreshToken: string) {
+  return apiFetch<AuthTokensDto>('/auth/refresh', { method: 'POST', body: JSON.stringify({ refreshToken }) });
+}
+
+export function logout(refreshToken: string) {
+  return apiFetch<void>('/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken }) });
+}
+
+export function getMe(accessToken: string) {
+  return apiFetch<AuthUserDto>('/auth/me', { headers: { Authorization: `Bearer ${accessToken}` } });
 }

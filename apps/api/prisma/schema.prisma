@@ -11,15 +11,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User minimal : uniquement ce qu'il faut pour la relation de propriété des comptes.
-// L'authentification (JWT, refresh tokens, mot de passe/OTP) est un domaine séparé,
-// pas encore implémenté.
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
   fullName  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // Nullable : les utilisateurs créés avant le domaine auth (seed, tests d'autres
+  // domaines) n'ont pas de mot de passe tant qu'ils ne passent pas par /auth/register.
+  // Jamais un PIN Mobile Money ni un identifiant bancaire — uniquement le mot de passe
+  // du compte Finza lui-même.
+  passwordHash String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   accounts      Account[]
   categories    Category[]
@@ -28,6 +30,7 @@ model User {
   subscriptions Subscription[]
   reports       Report[]
   ownedFamilies Family[]      @relation("FamilyOwner")
+  refreshTokens RefreshToken[]
   // Un utilisateur appartient à au plus une famille (FamilyMember.userId est unique) :
   // simplifie "quels comptes sont visibles" sans ambiguïté tant qu'il n'y a qu'un seul
   // foyer à gérer. Étendre à plusieurs familles resterait une évolution possible plus tard.
@@ -338,4 +341,20 @@ model FamilyMember {
   joinedAt DateTime   @default(now())
 
   @@map("family_members")
+}
+
+// Jeton opaque (pas un JWT) : permet la révocation réelle en base, contrairement à un JWT
+// stateless qu'on ne peut qu'attendre d'expirer. Seul le hash est stocké, jamais le jeton
+// en clair — comme pour un mot de passe.
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
 }
