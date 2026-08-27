@@ -3,7 +3,11 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: true préserve les octets bruts de chaque requête (req.rawBody) sans désactiver
+  // le parsing JSON habituel — nécessaire pour vérifier la signature HMAC du webhook de
+  // paiement, qui doit porter sur les octets exacts envoyés par le prestataire, jamais sur
+  // une version reparsée/reformatée par Express.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   app.enableCors();
   app.useGlobalPipes(

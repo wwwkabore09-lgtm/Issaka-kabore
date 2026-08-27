@@ -10,6 +10,7 @@ export * from './categories';
 export * from './debts';
 export * from './families';
 export * from './goals';
+export * from './payments';
 export * from './reports';
 export * from './subscriptions';
 export * from './transactions';

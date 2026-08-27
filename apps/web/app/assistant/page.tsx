@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Loader2, Send, Sparkles } from 'lucide-react';
 import type { ChatTurn } from '@finza/shared-types';
 import { cn } from '@finza/ui';
@@ -179,9 +180,14 @@ export default function AssistantPage() {
       </div>
 
       {error && (
-        <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <span>{error}</span>
+          {error.includes('réservée aux abonnés Premium') && (
+            <Link href="/subscription" className="whitespace-nowrap font-medium underline underline-offset-2">
+              Passer à Premium
+            </Link>
+          )}
+        </div>
       )}
 
       {messages.length > 0 && (

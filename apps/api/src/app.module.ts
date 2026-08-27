@@ -14,6 +14,7 @@ import { ReportsModule } from './reports/reports.module';
 import { FamiliesModule } from './families/families.module';
 import { AuthModule } from './auth/auth.module';
 import { AiModule } from './ai/ai.module';
+import { PremiumModule } from './premium/premium.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { AiModule } from './ai/ai.module';
     SubscriptionsModule,
     ReportsModule,
     FamiliesModule,
+    PremiumModule,
     AiModule,
   ],
   controllers: [AppController],

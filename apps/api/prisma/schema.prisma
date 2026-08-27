@@ -38,6 +38,10 @@ model User {
   incomeFrequency     RevenueFrequency?
   financialSituation  FinancialSituation?
 
+  // Jamais dans le JWT (JwtStrategy ne renvoie que l'id) : rechargé depuis la base à chaque
+  // requête admin, pour ne jamais faire confiance à un token ancien si le rôle est retiré.
+  isAdmin Boolean @default(false)
+
   accounts      Account[]
   categories    Category[]
   goals         Goal[]
@@ -46,6 +50,8 @@ model User {
   reports       Report[]
   ownedFamilies Family[]      @relation("FamilyOwner")
   refreshTokens RefreshToken[]
+  payments             Payment[]
+  premiumSubscription  PremiumSubscription?
   // Un utilisateur appartient à au plus une famille (FamilyMember.userId est unique) :
   // simplifie "quels comptes sont visibles" sans ambiguïté tant qu'il n'y a qu'un seul
   // foyer à gérer. Étendre à plusieurs familles resterait une évolution possible plus tard.
@@ -402,4 +408,86 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+// Statut normalisé d'un paiement, indépendant du prestataire — toute implémentation de
+// PaymentProvider (voir apps/api/src/premium) doit mapper les statuts propres au fournisseur
+// vers ces valeurs, jamais l'inverse.
+enum PaymentStatus {
+  pending
+  processing
+  successful
+  failed
+  cancelled
+  refunded
+}
+
+// Statut de l'abonnement Premium — déterminé automatiquement à partir de endDate/autoRenew
+// (voir PremiumService.deriveStatus), jamais écrit directement par le client.
+enum PremiumStatus {
+  pending
+  active
+  expired
+  cancelled
+}
+
+// Une tentative de paiement, quelle que soit son issue — jamais réécrite après coup : un
+// paiement raté reste dans l'historique (voir section "Historique des paiements").
+model Payment {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Montant ATTENDU, fixé côté serveur à la création — jamais lu depuis le frontend ni
+  // depuis le webhook. La confirmation du prestataire doit correspondre exactement.
+  amount   Decimal @db.Decimal(18, 2)
+  currency String
+
+  status PaymentStatus @default(pending)
+  // Nom du prestataire ("unconfigured" tant qu'aucun n'est branché) — jamais un enum : en
+  // changer ne doit pas nécessiter de migration.
+  provider String
+
+  // Identifiant du prestataire pour cette transaction, connu une fois sa réponse reçue
+  // (création ou webhook) — unique, sert de clé de déduplication pour l'idempotence.
+  providerTransactionId String? @unique
+  // Charge utile brute du dernier événement reçu, conservée pour audit uniquement — jamais
+  // utilisée pour reconstruire une décision (les champs typés ci-dessus font foi).
+  metadata Json?
+
+  premiumSubscriptionId String?
+  premiumSubscription   PremiumSubscription? @relation(fields: [premiumSubscriptionId], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([userId, createdAt])
+  @@map("payments")
+}
+
+// Une ligne par utilisateur (mise à jour à chaque paiement réussi), pas un historique de
+// lignes : Payment ci-dessus est déjà l'historique complet. Un seul plan existe aujourd'hui
+// ("premium"), le champ reste une chaîne pour ne pas figer cette hypothèse dans un enum.
+model PremiumSubscription {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  plan     String        @default("premium")
+  price    Decimal       @db.Decimal(18, 2)
+  currency String
+  status   PremiumStatus @default(pending)
+
+  startDate DateTime?
+  endDate   DateTime?
+  // Annuler ne coupe jamais l'accès en cours — voir PremiumService.deriveStatus : le statut
+  // reste "active" jusqu'à endDate même si autoRenew est passé à false entre-temps.
+  autoRenew Boolean @default(true)
+
+  payments Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("premium_subscriptions")
 }

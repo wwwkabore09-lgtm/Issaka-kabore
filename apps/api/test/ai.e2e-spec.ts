@@ -58,6 +58,21 @@ describe('AiController (e2e)', () => {
     userId = user.userId;
     accessToken = user.accessToken;
 
+    // L'Assistant IA est une fonctionnalité Premium (PremiumGuard) : ces tests portent sur
+    // le comportement de l'IA elle-même, pas sur le contrôle d'accès Premium (couvert par
+    // premium.e2e-spec.ts) — l'utilisateur de test est donc rendu Premium directement.
+    await prisma.premiumSubscription.create({
+      data: {
+        userId,
+        plan: 'premium',
+        price: '2000.00',
+        currency: 'XOF',
+        status: 'active',
+        startDate: new Date(),
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
+    });
+
     const [income, expense] = await Promise.all([
       prisma.category.create({ data: { userId, key: 'salaire-ai-test', label: 'Salaire', kind: 'income' } }),
       prisma.category.create({ data: { userId, key: 'alimentation-ai-test', label: 'Alimentation', kind: 'expense' } }),
@@ -85,6 +100,19 @@ describe('AiController (e2e)', () => {
   it('rejette les requêtes sans access token', async () => {
     await request(app.getHttpServer()).post('/ai/advice').send({ message: 'Bonjour' }).expect(401);
     await request(app.getHttpServer()).get('/ai/summary').expect(401);
+  });
+
+  it("refuse l'accès à un utilisateur authentifié mais non Premium (PremiumGuard, jamais une simple restriction frontend)", async () => {
+    const freeUser = await registerTestUser(app, { email: `ai-free-e2e-${Date.now()}@finza.test`, fullName: 'Utilisateur gratuit' });
+
+    const res = await request(app.getHttpServer())
+      .post('/ai/advice')
+      .set(...authHeader(freeUser.accessToken))
+      .send({ message: 'Bonjour' })
+      .expect(403);
+
+    expect(res.body.message).toBe('Cette fonctionnalité est réservée aux abonnés Premium.');
+    await prisma.user.delete({ where: { id: freeUser.userId } });
   });
 
   it("renvoie 503 avec un message clair si la clé Gemini est absente, sans jamais l'exposer", async () => {

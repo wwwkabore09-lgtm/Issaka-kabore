@@ -3,6 +3,7 @@ import { AiService } from './ai.service';
 import { AskAdviceDto } from './dto/ask-advice.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
+import { PremiumGuard } from '../premium/premium.guard';
 import { AiEmptyResponseError, AiNotConfiguredError, AiProviderError, AiRateLimitedError, AiTimeoutError } from './ai.errors';
 
 // Chaque erreur du module IA porte déjà un message sûr à renvoyer tel quel (jamais de detail
@@ -16,8 +17,11 @@ function toHttpException(error: unknown): HttpException {
   throw error;
 }
 
+// L'Assistant IA est une fonctionnalité Premium (voir module premium) : PremiumGuard refuse
+// l'accès côté serveur si l'utilisateur n'est pas abonné, quel que soit ce que montre le
+// frontend — jamais une restriction seulement visuelle.
 @Controller('ai')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PremiumGuard)
 export class AiController {
   constructor(private readonly aiService: AiService) {}
 

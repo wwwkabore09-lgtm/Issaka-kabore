@@ -43,6 +43,12 @@ import type {
   UpdateSubscriptionRequest,
   UpdateTransactionRequest,
   UpdateProfileRequest,
+  AdminPaymentDto,
+  AdminPremiumStatsDto,
+  InitiatePaymentResponseDto,
+  PaymentDto,
+  PremiumSubscriptionDto,
+  UpdateAutoRenewRequest,
 } from '@finza/shared-types';
 import { clearSession, getStoredRefreshToken, updateTokens } from './auth-session';
 
@@ -451,4 +457,35 @@ export function askAiAdvice(accessToken: string, payload: AskAdviceRequest) {
 
 export function getAiSummary(accessToken: string) {
   return apiFetch<AdviceResponseDto>('/ai/summary', { headers: authHeaders(accessToken) });
+}
+
+export function getPremiumStatus(accessToken: string) {
+  return apiFetch<PremiumSubscriptionDto>('/premium/status', { headers: authHeaders(accessToken) });
+}
+
+export function subscribeToPremium(accessToken: string) {
+  return apiFetch<InitiatePaymentResponseDto>('/premium/subscribe', {
+    method: 'POST',
+    headers: authHeaders(accessToken),
+  });
+}
+
+export function listPremiumPayments(accessToken: string) {
+  return apiFetch<PaymentDto[]>('/premium/payments', { headers: authHeaders(accessToken) });
+}
+
+export function updateAutoRenew(accessToken: string, payload: UpdateAutoRenewRequest) {
+  return apiFetch<PremiumSubscriptionDto>('/premium/auto-renew', {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+    headers: authHeaders(accessToken),
+  });
+}
+
+export function getAdminPremiumStats(accessToken: string) {
+  return apiFetch<AdminPremiumStatsDto>('/admin/premium/stats', { headers: authHeaders(accessToken) });
+}
+
+export function listAdminPremiumTransactions(accessToken: string) {
+  return apiFetch<AdminPaymentDto[]>('/admin/premium/transactions', { headers: authHeaders(accessToken) });
 }

@@ -145,6 +145,7 @@ export class AuthService {
     mainFinancialGoal: string | null;
     incomeFrequency: RevenueFrequency | null;
     financialSituation: FinancialSituation | null;
+    isAdmin: boolean;
   }): AuthUserDto {
     return {
       id: user.id,
@@ -155,6 +156,7 @@ export class AuthService {
       mainFinancialGoal: user.mainFinancialGoal,
       incomeFrequency: user.incomeFrequency,
       financialSituation: user.financialSituation,
+      isAdmin: user.isAdmin,
     };
   }
 }

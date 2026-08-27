@@ -18,6 +18,10 @@ export interface AuthUserDto {
   mainFinancialGoal: string | null;
   incomeFrequency: RevenueFrequency | null;
   financialSituation: FinancialSituation | null;
+  // Purement informatif pour l'UI (afficher/masquer le lien Admin) : les routes admin
+  // rechargent et vérifient ce rôle depuis la base à chaque requête (voir AdminGuard),
+  // jamais sur la seule foi de ce champ.
+  isAdmin: boolean;
 }
 
 export interface UpdateProfileRequest {
