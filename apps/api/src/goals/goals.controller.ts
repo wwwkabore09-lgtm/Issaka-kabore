@@ -21,6 +21,11 @@ export class GoalsController {
     return this.goalsService.findAllForUser(userId);
   }
 
+  @Get('savings-overview')
+  getSavingsOverview(@CurrentUser() userId: string) {
+    return this.goalsService.getSavingsOverview(userId);
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() userId: string) {
     return this.goalsService.findOneForUser(id, userId);

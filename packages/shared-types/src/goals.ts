@@ -50,3 +50,11 @@ export interface CreateGoalContributionRequest {
   note?: string;
   contributedAt?: string;
 }
+
+// "Épargne" au sens du tableau de bord : ce que l'utilisateur a lui-même mis de côté vers
+// ses objectifs, jamais un simple solde de compte. currentMonthTotal + série mensuelle sur
+// les derniers mois, tous objectifs confondus.
+export interface SavingsOverviewDto {
+  currentMonthTotal: string;
+  monthlySeries: { month: string; total: string }[];
+}

@@ -5,7 +5,9 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@finza/ui';
 
 const NAV_ITEMS = [
+  { href: '/dashboard', label: 'Tableau de bord' },
   { href: '/comptes', label: 'Comptes' },
+  { href: '/transactions', label: 'Transactions' },
   { href: '/objectifs', label: 'Objectifs' },
   { href: '/dettes', label: 'Dettes' },
   { href: '/abonnements', label: 'Abonnements' },

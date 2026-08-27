@@ -32,11 +32,14 @@ import type {
   SubscriptionsSummaryDto,
   TransactionDto,
   TransactionSummaryDto,
+  DashboardOverviewDto,
+  SavingsOverviewDto,
   UpdateAccountRequest,
   UpdateBudgetRequest,
   UpdateDebtRequest,
   UpdateGoalRequest,
   UpdateSubscriptionRequest,
+  UpdateTransactionRequest,
 } from '@finza/shared-types';
 import { clearSession, getStoredRefreshToken, updateTokens } from './auth-session';
 
@@ -158,6 +161,14 @@ export function getRevenueOverview(accessToken: string) {
   return apiFetch<RevenueOverviewDto>('/transactions/revenue-overview', { headers: authHeaders(accessToken) });
 }
 
+export function getDashboardOverview(accessToken: string) {
+  return apiFetch<DashboardOverviewDto>('/transactions/dashboard-overview', { headers: authHeaders(accessToken) });
+}
+
+export function getSavingsOverview(accessToken: string) {
+  return apiFetch<SavingsOverviewDto>('/goals/savings-overview', { headers: authHeaders(accessToken) });
+}
+
 export function listCategories(userId: string) {
   return apiFetch<CategoryDto[]>(`/categories?userId=${encodeURIComponent(userId)}`);
 }
@@ -167,12 +178,42 @@ export function listTransactions(accountId: string, accessToken: string) {
   return apiFetch<TransactionDto[]>(`/transactions?${query.toString()}`, { headers: authHeaders(accessToken) });
 }
 
+export interface TransactionFilters {
+  type?: 'income' | 'expense' | 'transfer';
+  categoryId?: string;
+  from?: string;
+  to?: string;
+  q?: string;
+}
+
+// accountId omis = vue centralisée tous comptes confondus (page /transactions).
+export function listAllTransactions(accessToken: string, filters: TransactionFilters = {}) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (value) query.set(key, value);
+  }
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return apiFetch<TransactionDto[]>(`/transactions${suffix}`, { headers: authHeaders(accessToken) });
+}
+
 export function createTransaction(accessToken: string, payload: CreateTransactionRequest) {
   return apiFetch<TransactionDto>('/transactions', {
     method: 'POST',
     body: JSON.stringify(payload),
     headers: authHeaders(accessToken),
   });
+}
+
+export function updateTransaction(id: string, accessToken: string, payload: UpdateTransactionRequest) {
+  return apiFetch<TransactionDto>(`/transactions/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+    headers: authHeaders(accessToken),
+  });
+}
+
+export function deleteTransaction(id: string, accessToken: string) {
+  return apiFetch<void>(`/transactions/${id}`, { method: 'DELETE', headers: authHeaders(accessToken) });
 }
 
 export function getTransactionSummary(accountId: string, accessToken: string, from: string, to: string) {

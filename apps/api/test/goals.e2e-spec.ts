@@ -166,4 +166,33 @@ describe('GoalsController (e2e)', () => {
       .set(...authHeader(accessToken))
       .expect(404);
   });
+
+  it("calcule le total d'épargne du mois courant et la série mensuelle tous objectifs confondus", async () => {
+    const createRes = await request(app.getHttpServer())
+      .post('/goals')
+      .set(...authHeader(accessToken))
+      .send({ name: 'Épargne overview', targetAmount: '50000' })
+      .expect(201);
+
+    const now = new Date();
+    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 15).toISOString();
+
+    await request(app.getHttpServer())
+      .post(`/goals/${createRes.body.id}/contributions`)
+      .set(...authHeader(accessToken))
+      .send({ amount: '7000', contributedAt: thisMonth })
+      .expect(201);
+
+    const overview = await request(app.getHttpServer())
+      .get('/goals/savings-overview')
+      .set(...authHeader(accessToken))
+      .expect(200);
+
+    expect(Number(overview.body.currentMonthTotal)).toBeGreaterThanOrEqual(7000);
+    expect(overview.body.monthlySeries).toHaveLength(6);
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const currentPoint = overview.body.monthlySeries.find((p: { month: string }) => p.month === currentMonthKey);
+    expect(currentPoint).toBeDefined();
+    expect(Number(currentPoint.total)).toBeGreaterThanOrEqual(7000);
+  });
 });

@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { ToastProvider } from '@/components/toast';
+import { ConfirmProvider } from '@/components/confirm-dialog';
 
 export const metadata: Metadata = {
   title: 'Finza',
@@ -13,7 +15,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr">
-      <body>{children}</body>
+      <body>
+        <ToastProvider>
+          <ConfirmProvider>{children}</ConfirmProvider>
+        </ToastProvider>
+      </body>
     </html>
   );
 }

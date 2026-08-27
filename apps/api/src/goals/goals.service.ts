@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { GoalContributionDto, GoalDto, GoalProgressDto } from '@finza/shared-types';
+import type { GoalContributionDto, GoalDto, GoalProgressDto, SavingsOverviewDto } from '@finza/shared-types';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccountsService } from '../accounts/accounts.service';
 import { CreateGoalDto } from './dto/create-goal.dto';
@@ -110,6 +110,39 @@ export class GoalsService {
       note: contribution.note,
       contributedAt: contribution.contributedAt.toISOString(),
       createdAt: contribution.createdAt.toISOString(),
+    };
+  }
+
+  // "Épargne" du tableau de bord : total des contributions saisies par l'utilisateur ce
+  // mois-ci, tous objectifs confondus, plus une série mensuelle pour le graphique d'évolution.
+  async getSavingsOverview(userId: string, months = 6): Promise<SavingsOverviewDto> {
+    const now = new Date();
+    const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [currentMonthAgg, monthlySeries] = await Promise.all([
+      this.prisma.goalContribution.aggregate({
+        where: { goal: { userId }, contributedAt: { gte: startOfCurrentMonth, lte: now } },
+        _sum: { amount: true },
+      }),
+      Promise.all(
+        Array.from({ length: months }, (_, i) => months - 1 - i).map(async (offset) => {
+          const start = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+          const end = new Date(now.getFullYear(), now.getMonth() - offset + 1, 1);
+          const agg = await this.prisma.goalContribution.aggregate({
+            where: { goal: { userId }, contributedAt: { gte: start, lt: end } },
+            _sum: { amount: true },
+          });
+          return {
+            month: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`,
+            total: (agg._sum.amount ?? new Prisma.Decimal(0)).toFixed(2),
+          };
+        }),
+      ),
+    ]);
+
+    return {
+      currentMonthTotal: (currentMonthAgg._sum.amount ?? new Prisma.Decimal(0)).toFixed(2),
+      monthlySeries,
     };
   }
 

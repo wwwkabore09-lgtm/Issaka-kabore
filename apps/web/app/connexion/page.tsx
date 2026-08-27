@@ -26,7 +26,7 @@ export default function ConnexionPage() {
         accessToken: result.tokens.accessToken,
         refreshToken: result.tokens.refreshToken,
       });
-      router.push('/comptes');
+      router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {

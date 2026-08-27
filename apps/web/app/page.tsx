@@ -20,7 +20,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (getStoredAccessToken()) {
-      router.replace('/comptes');
+      router.replace('/dashboard');
       return;
     }
     setCheckingSession(false);

@@ -27,7 +27,7 @@ export default function InscriptionPage() {
         accessToken: result.tokens.accessToken,
         refreshToken: result.tokens.refreshToken,
       });
-      router.push('/comptes');
+      router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {

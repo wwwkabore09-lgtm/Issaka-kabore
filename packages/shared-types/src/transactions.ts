@@ -26,6 +26,14 @@ export interface CreateTransactionRequest {
   occurredAt?: string;
 }
 
+// type/accountId/transferToAccountId/occurredAt ne sont jamais modifiables après création
+// (voir le commentaire sur UpdateTransactionDto côté API pour le pourquoi).
+export interface UpdateTransactionRequest {
+  amount?: string;
+  categoryId?: string;
+  description?: string;
+}
+
 // Le total revenus/dépenses exclut toujours les transactions de type "transfer" :
 // ce ne sont jamais des revenus ni des dépenses, seulement un mouvement entre comptes.
 export interface TransactionSummaryDto {
@@ -46,6 +54,29 @@ export interface TransactionUserSummaryDto {
   totalIncome: string;
   totalExpense: string;
   netFlow: string;
+}
+
+export interface MonthlyAmountPoint {
+  month: string; // "YYYY-MM"
+  totalIncome: string;
+  totalExpense: string;
+}
+
+export interface ExpenseCategoryBreakdown {
+  categoryId: string;
+  categoryLabel: string;
+  total: string;
+}
+
+// Tout ce dont le tableau de bord a besoin en un seul appel : chiffres du mois courant et
+// du mois précédent (pour l'évolution), série mensuelle (revenus vs dépenses) et répartition
+// des dépenses du mois par catégorie — toujours calculé depuis les transactions réellement
+// saisies par l'utilisateur, jamais de donnée fictive.
+export interface DashboardOverviewDto {
+  currentMonth: { totalIncome: string; totalExpense: string; netFlow: string };
+  previousMonth: { totalIncome: string; totalExpense: string };
+  monthlySeries: MonthlyAmountPoint[];
+  expenseByCategory: ExpenseCategoryBreakdown[];
 }
 
 // Vue d'ensemble des revenus saisis manuellement par l'utilisateur, tous comptes confondus.
