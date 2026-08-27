@@ -49,23 +49,38 @@ export default function InscriptionPage() {
       )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <label htmlFor="inscription-name" className="sr-only">
+          Nom complet
+        </label>
         <input
+          id="inscription-name"
+          autoComplete="name"
           value={fullName}
           onChange={(event) => setFullName(event.target.value)}
           placeholder="Nom complet"
           required
           className="rounded-md border border-input bg-background px-3 py-2 text-sm"
         />
+        <label htmlFor="inscription-email" className="sr-only">
+          Email
+        </label>
         <input
+          id="inscription-email"
           type="email"
+          autoComplete="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="Email"
           required
           className="rounded-md border border-input bg-background px-3 py-2 text-sm"
         />
+        <label htmlFor="inscription-password" className="sr-only">
+          Mot de passe
+        </label>
         <input
+          id="inscription-password"
           type="password"
+          autoComplete="new-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           placeholder="Mot de passe (8 caractères minimum)"

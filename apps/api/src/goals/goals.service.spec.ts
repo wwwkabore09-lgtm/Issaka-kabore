@@ -50,7 +50,7 @@ describe('GoalsService', () => {
     it('vérifie la propriété du compte quand accountId est fourni', async () => {
       prisma.goal.create.mockResolvedValue({ ...goal, accountId });
 
-      await service.create(userId, { accountId, name: 'Épargne Wave', targetAmount: '100000' });
+      await service.create(userId, { accountId, name: 'Épargne Vacances', targetAmount: '100000' });
 
       expect(accountsService.getOwnedAccountOrThrow).toHaveBeenCalledWith(accountId, userId);
     });

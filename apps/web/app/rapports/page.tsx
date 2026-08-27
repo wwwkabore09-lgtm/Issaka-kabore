@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { FileBarChart } from 'lucide-react';
 import type { ReportDto } from '@finza/shared-types';
 import { cn } from '@finza/ui';
 import { deleteReport, generateReport, listReports } from '@/lib/api';
@@ -225,6 +226,7 @@ export default function RapportsPage() {
 
         {!loading && reports.length === 0 && (
           <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border p-8 text-center">
+            <FileBarChart className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
             <p className="font-medium">Aucun rapport généré</p>
             <p className="text-sm text-muted-foreground">Générez votre premier rapport pour figer un instantané de vos finances.</p>
           </div>

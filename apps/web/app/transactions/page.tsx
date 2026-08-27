@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Receipt } from 'lucide-react';
 import type { AccountDto, CategoryDto, TransactionDto, TransactionType } from '@finza/shared-types';
 import { TRANSACTION_TYPES } from '@finza/shared-types';
 import { CURRENCIES } from '@finza/config';
@@ -561,6 +562,7 @@ export default function TransactionsPage() {
 
       {accounts.length > 0 && !loading && sortedTransactions.length === 0 && (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border p-10 text-center">
+          <Receipt className="h-10 w-10 text-muted-foreground" aria-hidden="true" />
           <p className="font-medium">Aucune transaction enregistrée</p>
           <p className="text-sm text-muted-foreground">
             Ajoutez votre premier revenu ou votre première dépense pour commencer à suivre vos finances.

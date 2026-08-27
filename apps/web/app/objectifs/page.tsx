@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Target } from 'lucide-react';
 import type { AccountDto, GoalContributionDto, GoalProgressDto } from '@finza/shared-types';
 import { cn } from '@finza/ui';
 import {
@@ -298,6 +299,7 @@ export default function ObjectifsPage() {
 
         {!loading && goals.length === 0 && (
           <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border p-8 text-center">
+            <Target className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
             <p className="font-medium">Aucun objectif enregistré</p>
             <p className="text-sm text-muted-foreground">
               Créez votre premier objectif d&apos;épargne pour commencer à suivre votre progression.

@@ -178,7 +178,11 @@ export default function FamillePage() {
         <form onSubmit={handleCreate} className="flex flex-col gap-3 rounded-lg border border-border p-4">
           <h2 className="font-medium">Vous n&apos;appartenez à aucune famille</h2>
           <div className="flex gap-2">
+            <label htmlFor="family-name" className="sr-only">
+              Nom de la famille
+            </label>
             <input
+              id="family-name"
               value={familyName}
               onChange={(event) => setFamilyName(event.target.value)}
               placeholder="Nom de la famille (ex: Famille Kaboré)"
@@ -234,7 +238,11 @@ export default function FamillePage() {
 
             {isOwner && (
               <form onSubmit={handleAddMember} className="mt-4 flex gap-2 border-t border-border pt-4">
+                <label htmlFor="family-member-id" className="sr-only">
+                  Identifiant utilisateur à ajouter
+                </label>
                 <input
+                  id="family-member-id"
                   value={memberUserId}
                   onChange={(event) => setMemberUserId(event.target.value.trim())}
                   placeholder="Identifiant utilisateur à ajouter"

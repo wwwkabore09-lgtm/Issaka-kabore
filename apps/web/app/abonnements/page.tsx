@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Repeat } from 'lucide-react';
 import type { BillingFrequency, SubscriptionDto, SubscriptionsSummaryDto } from '@finza/shared-types';
 import { BILLING_FREQUENCIES } from '@finza/shared-types';
 import { cn } from '@finza/ui';
@@ -302,6 +303,7 @@ export default function AbonnementsPage() {
 
         {!loading && subscriptions.length === 0 && (
           <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border p-8 text-center">
+            <Repeat className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
             <p className="font-medium">Aucun abonnement enregistré</p>
             <p className="text-sm text-muted-foreground">
               Ajoutez vos paiements récurrents pour suivre leur coût mensuel total.

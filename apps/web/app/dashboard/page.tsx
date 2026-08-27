@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { PiggyBank, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 import type { AccountDto, DashboardOverviewDto, SavingsOverviewDto } from '@finza/shared-types';
 import { COUNTRIES, CURRENCIES, LAUNCH_COUNTRY } from '@finza/config';
 import { cn } from '@finza/ui';
@@ -123,6 +124,7 @@ export default function DashboardPage() {
 
       {!loading && accounts.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border p-12 text-center">
+          <Wallet className="h-10 w-10 text-muted-foreground" aria-hidden="true" />
           <p className="text-lg font-medium">Bienvenue sur Finza</p>
           <p className="max-w-sm text-sm text-muted-foreground">
             Ajoutez votre première source de revenus pour commencer à suivre vos finances — votre tableau de bord se
@@ -139,22 +141,34 @@ export default function DashboardPage() {
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div className="rounded-lg border border-border p-3">
-              <p className="text-xs text-muted-foreground">Revenus (mois)</p>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
+                Revenus (mois)
+              </div>
               <p className="text-lg font-semibold">{overview ? formatAmount(overview.currentMonth.totalIncome, DEFAULT_CURRENCY) : '—'}</p>
               <EvolutionBadge value={revenueEvolution} />
             </div>
             <div className="rounded-lg border border-border p-3">
-              <p className="text-xs text-muted-foreground">Dépenses (mois)</p>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <TrendingDown className="h-3.5 w-3.5" aria-hidden="true" />
+                Dépenses (mois)
+              </div>
               <p className="text-lg font-semibold">{overview ? formatAmount(overview.currentMonth.totalExpense, DEFAULT_CURRENCY) : '—'}</p>
               <EvolutionBadge value={expenseEvolution} invertColors />
             </div>
             <div className="rounded-lg border border-border p-3">
-              <p className="text-xs text-muted-foreground">Solde</p>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Wallet className="h-3.5 w-3.5" aria-hidden="true" />
+                Solde
+              </div>
               <p className="text-lg font-semibold">{formatAmount(solde, DEFAULT_CURRENCY)}</p>
               <p className="text-xs text-muted-foreground">Tous comptes confondus</p>
             </div>
             <div className="rounded-lg border border-border p-3">
-              <p className="text-xs text-muted-foreground">Épargne (mois)</p>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <PiggyBank className="h-3.5 w-3.5" aria-hidden="true" />
+                Épargne (mois)
+              </div>
               <p className="text-lg font-semibold">{savings ? formatAmount(savings.currentMonthTotal, DEFAULT_CURRENCY) : '—'}</p>
               <p className="text-xs text-muted-foreground">Contributions à vos objectifs</p>
             </div>

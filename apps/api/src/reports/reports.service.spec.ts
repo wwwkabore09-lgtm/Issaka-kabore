@@ -21,8 +21,8 @@ describe('ReportsService', () => {
   const userId = '11111111-1111-1111-1111-111111111111';
   const reportId = '22222222-2222-2222-2222-222222222222';
 
-  const accountA = { id: 'acc-a', name: 'Orange Money', currency: 'XOF', currentBalance: '50000.00' };
-  const accountB = { id: 'acc-b', name: 'Wave', currency: 'XOF', currentBalance: '20000.00' };
+  const accountA = { id: 'acc-a', name: 'Salaire', currency: 'XOF', currentBalance: '50000.00' };
+  const accountB = { id: 'acc-b', name: 'Commerce', currency: 'XOF', currentBalance: '20000.00' };
 
   beforeEach(() => {
     prisma = {
@@ -83,8 +83,8 @@ describe('ReportsService', () => {
       );
 
       expect(result.snapshot.accounts).toEqual([
-        { id: 'acc-a', name: 'Orange Money', currency: 'XOF', currentBalance: '50000.00' },
-        { id: 'acc-b', name: 'Wave', currency: 'XOF', currentBalance: '20000.00' },
+        { id: 'acc-a', name: 'Salaire', currency: 'XOF', currentBalance: '50000.00' },
+        { id: 'acc-b', name: 'Commerce', currency: 'XOF', currentBalance: '20000.00' },
       ]);
       expect(result.snapshot.cashFlow.totalIncome).toBe('100000.00');
       expect(result.title).toBeDefined();

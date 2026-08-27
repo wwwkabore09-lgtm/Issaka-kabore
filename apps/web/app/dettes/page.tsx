@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { HandCoins } from 'lucide-react';
 import type { AccountDto, DebtDirection, DebtPaymentDto, DebtProgressDto } from '@finza/shared-types';
 import { DEBT_DIRECTIONS } from '@finza/shared-types';
 import { cn } from '@finza/ui';
@@ -330,6 +331,7 @@ export default function DettesPage() {
 
         {!loading && visibleDebts.length === 0 && (
           <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border p-8 text-center">
+            <HandCoins className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
             <p className="font-medium">Aucune dette ni créance enregistrée</p>
             <p className="text-sm text-muted-foreground">Ajoutez votre première entrée pour la suivre ici.</p>
           </div>

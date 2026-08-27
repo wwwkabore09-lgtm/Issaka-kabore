@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Banknote } from 'lucide-react';
 import {
   ACCOUNT_OWNERSHIPS,
   REVENUE_CATEGORIES,
@@ -265,7 +266,11 @@ export default function ComptesPage() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-lg border border-border p-4">
             <h3 className="font-medium">{editingId ? 'Modifier ce revenu' : 'Nouveau revenu'}</h3>
 
+            <label htmlFor="revenue-name" className="sr-only">
+              Nom
+            </label>
             <input
+              id="revenue-name"
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Nom (ex: Mon activité)"
@@ -274,17 +279,27 @@ export default function ComptesPage() {
             />
 
             {!editingId && (
-              <input
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
-                placeholder="Montant (optionnel, ex: 150000)"
-                inputMode="decimal"
-                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-              />
+              <>
+                <label htmlFor="revenue-amount" className="sr-only">
+                  Montant
+                </label>
+                <input
+                  id="revenue-amount"
+                  value={amount}
+                  onChange={(event) => setAmount(event.target.value)}
+                  placeholder="Montant (optionnel, ex: 150000)"
+                  inputMode="decimal"
+                  className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </>
             )}
 
             <div className="grid grid-cols-2 gap-3">
+              <label htmlFor="revenue-category" className="sr-only">
+                Catégorie
+              </label>
               <select
+                id="revenue-category"
                 value={category}
                 onChange={(event) => setCategory(event.target.value as RevenueCategory)}
                 className="rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -296,7 +311,11 @@ export default function ComptesPage() {
                 ))}
               </select>
 
+              <label htmlFor="revenue-frequency" className="sr-only">
+                Fréquence
+              </label>
               <select
+                id="revenue-frequency"
                 value={frequency}
                 onChange={(event) => setFrequency(event.target.value as RevenueFrequency)}
                 className="rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -349,6 +368,7 @@ export default function ComptesPage() {
 
         {!loading && accounts.length === 0 && !showForm && (
           <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border p-8 text-center">
+            <Banknote className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
             <p className="font-medium">Aucun revenu enregistré</p>
             <p className="text-sm text-muted-foreground">
               Ajoutez votre premier revenu pour commencer à suivre vos finances.

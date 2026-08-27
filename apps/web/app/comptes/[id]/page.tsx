@@ -393,7 +393,11 @@ export default function CompteDetailPage() {
 
         {budgetableCategories.length > 0 && (
           <form onSubmit={handleCreateBudget} className="flex flex-wrap items-center gap-2 rounded-lg border border-border p-3">
+            <label htmlFor="new-budget-category" className="sr-only">
+              Catégorie
+            </label>
             <select
+              id="new-budget-category"
               value={budgetCategoryId}
               onChange={(event) => setBudgetCategoryId(event.target.value)}
               required
@@ -408,7 +412,11 @@ export default function CompteDetailPage() {
                 </option>
               ))}
             </select>
+            <label htmlFor="new-budget-amount" className="sr-only">
+              Montant mensuel
+            </label>
             <input
+              id="new-budget-amount"
               value={budgetAmount}
               onChange={(event) => setBudgetAmount(event.target.value)}
               placeholder="Montant mensuel"
@@ -451,7 +459,11 @@ export default function CompteDetailPage() {
           ))}
         </div>
 
+        <label htmlFor="new-account-tx-amount" className="sr-only">
+          Montant
+        </label>
         <input
+          id="new-account-tx-amount"
           value={amount}
           onChange={(event) => setAmount(event.target.value)}
           placeholder="Montant"
@@ -461,42 +473,58 @@ export default function CompteDetailPage() {
         />
 
         {type !== 'transfer' && (
-          <select
-            value={categoryId}
-            onChange={(event) => setCategoryId(event.target.value)}
-            required
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-          >
-            <option value="" disabled>
-              Choisir une catégorie
-            </option>
-            {categoriesForType.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
+          <>
+            <label htmlFor="new-account-tx-category" className="sr-only">
+              Catégorie
+            </label>
+            <select
+              id="new-account-tx-category"
+              value={categoryId}
+              onChange={(event) => setCategoryId(event.target.value)}
+              required
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="" disabled>
+                Choisir une catégorie
               </option>
-            ))}
-          </select>
+              {categoriesForType.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </>
         )}
 
         {type === 'transfer' && (
-          <select
-            value={transferToAccountId}
-            onChange={(event) => setTransferToAccountId(event.target.value)}
-            required
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-          >
-            <option value="" disabled>
+          <>
+            <label htmlFor="new-account-tx-destination" className="sr-only">
               Compte de destination
-            </option>
-            {otherAccounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name} ({a.currency})
+            </label>
+            <select
+              id="new-account-tx-destination"
+              value={transferToAccountId}
+              onChange={(event) => setTransferToAccountId(event.target.value)}
+              required
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="" disabled>
+                Compte de destination
               </option>
-            ))}
-          </select>
+              {otherAccounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name} ({a.currency})
+                </option>
+              ))}
+            </select>
+          </>
         )}
 
+        <label htmlFor="new-account-tx-description" className="sr-only">
+          Description
+        </label>
         <input
+          id="new-account-tx-description"
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           placeholder="Description (optionnel)"

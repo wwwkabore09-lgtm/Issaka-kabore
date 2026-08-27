@@ -48,16 +48,26 @@ export default function ConnexionPage() {
       )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <label htmlFor="connexion-email" className="sr-only">
+          Email
+        </label>
         <input
+          id="connexion-email"
           type="email"
+          autoComplete="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           placeholder="Email"
           required
           className="rounded-md border border-input bg-background px-3 py-2 text-sm"
         />
+        <label htmlFor="connexion-password" className="sr-only">
+          Mot de passe
+        </label>
         <input
+          id="connexion-password"
           type="password"
+          autoComplete="current-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           placeholder="Mot de passe"

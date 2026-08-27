@@ -1,7 +1,8 @@
 # Finza
 
 Financial OS personnel et familial pour l'Afrique francophone (lancement Burkina Faso).
-Consolide Mobile Money, comptes bancaires et espèces dans une seule vue, avec budgets,
+Un outil de gestion financière **entièrement manuel** : l'utilisateur saisit lui-même ses
+revenus et dépenses, aucune connexion à Orange Money, Mobile Money ou une banque. Budgets,
 objectifs d'épargne, dettes, prévisions et un assistant IA scopé aux données de l'utilisateur.
 
 ## Stack
@@ -24,7 +25,7 @@ apps/
 packages/
   shared-types/  # DTOs/types partagés
   ui/            # composants partagés
-  config/        # config multi-pays (devises, catégories, opérateurs)
+  config/        # config multi-pays (devises, catégories)
 infra/
   docker-compose.yml
   migrations/
