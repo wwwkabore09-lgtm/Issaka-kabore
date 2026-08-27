@@ -1,10 +1,16 @@
 import { Body, Controller, Get, HttpException, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AiService } from './ai.service';
 import { AskAdviceDto } from './dto/ask-advice.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { PremiumGuard } from '../premium/premium.guard';
 import { AiEmptyResponseError, AiNotConfiguredError, AiProviderError, AiRateLimitedError, AiTimeoutError } from './ai.errors';
+
+// Chaque appel a un coût réel (facturation Gemini) — resserré par rapport au défaut global
+// (voir AppModule) même pour un utilisateur Premium légitime, pour plafonner le coût
+// d'abus possible depuis un seul compte/jeton.
+const AI_THROTTLE = { default: { limit: 15, ttl: 60_000 } };
 
 // Chaque erreur du module IA porte déjà un message sûr à renvoyer tel quel (jamais de detail
 // technique ni la clé API) — ce mapping ne fait que choisir le bon code HTTP.
@@ -26,6 +32,7 @@ export class AiController {
   constructor(private readonly aiService: AiService) {}
 
   @Post('advice')
+  @Throttle(AI_THROTTLE)
   async advice(@CurrentUser() userId: string, @Body() dto: AskAdviceDto) {
     try {
       return await this.aiService.getAdvice(userId, dto);
@@ -35,6 +42,7 @@ export class AiController {
   }
 
   @Get('summary')
+  @Throttle(AI_THROTTLE)
   async summary(@CurrentUser() userId: string) {
     try {
       return await this.aiService.getMonthlySummary(userId);
