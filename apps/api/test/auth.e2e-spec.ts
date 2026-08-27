@@ -121,4 +121,18 @@ describe('AuthController (e2e)', () => {
     // Logout est idempotent : un second appel sur un jeton déjà révoqué ne plante pas.
     await request(app.getHttpServer()).post('/auth/logout').send({ refreshToken }).expect(204);
   });
+
+  it('bloque après trop de tentatives de connexion (429)', async () => {
+    let sawTooManyRequests = false;
+    for (let i = 0; i < 15; i++) {
+      const res = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email, password: 'mauvais-mot-de-passe' });
+      if (res.status === 429) {
+        sawTooManyRequests = true;
+        break;
+      }
+    }
+    expect(sawTooManyRequests).toBe(true);
+  });
 });

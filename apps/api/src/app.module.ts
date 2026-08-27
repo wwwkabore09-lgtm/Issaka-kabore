@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -19,6 +21,10 @@ import { PremiumModule } from './premium/premium.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    // Limite globale par défaut (100 req/min/IP) — resserrée sur /auth/login et
+    // /auth/register via @Throttle pour limiter le bruteforce de mot de passe et la
+    // création massive de comptes.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     PrismaModule,
     AuthModule,
     AccountsModule,
@@ -34,6 +40,6 @@ import { PremiumModule } from './premium/premium.module';
     AiModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}
