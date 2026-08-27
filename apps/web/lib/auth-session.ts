@@ -1,9 +1,9 @@
-// Session JWT stockée côté client. finza_demo_user_id garde l'identité de l'utilisateur
+// Session JWT stockée côté client. finza_user_id garde l'identité de l'utilisateur
 // connecté (utile pour des comparaisons de rôle côté UI, ex: propriétaire vs membre sur la
 // page Famille) — jamais utilisé seul pour l'authentification, toujours accompagné du token.
 const ACCESS_TOKEN_KEY = 'finza_access_token';
 const REFRESH_TOKEN_KEY = 'finza_refresh_token';
-const USER_ID_KEY = 'finza_demo_user_id';
+const USER_ID_KEY = 'finza_user_id';
 const USER_EMAIL_KEY = 'finza_user_email';
 
 export interface StoredSession {

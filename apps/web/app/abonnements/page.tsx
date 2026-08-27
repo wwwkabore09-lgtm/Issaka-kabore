@@ -372,7 +372,7 @@ export default function AbonnementsPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <p className="font-medium">{s.name}</p>
                       <span className="font-medium">{formatXof(s.amount)}</span>
                     </div>

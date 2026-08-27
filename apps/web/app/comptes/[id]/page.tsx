@@ -522,7 +522,7 @@ export default function CompteDetailPage() {
             const category = categories.find((c) => c.id === t.categoryId);
             const sign = t.type === 'income' ? '+' : t.type === 'expense' ? '-' : '↔';
             return (
-              <li key={t.id} className="flex items-center justify-between rounded-lg border border-border p-3">
+              <li key={t.id} className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-border p-3">
                 <div>
                   <p className="font-medium">
                     {t.type === 'transfer' ? 'Transfert' : (category?.label ?? '—')}

@@ -370,7 +370,7 @@ export default function ComptesPage() {
               key={account.id}
               className={cn('rounded-lg border border-border p-3', !account.isActive && 'opacity-50')}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-start justify-between gap-2">
                 <Link href={`/comptes/${account.id}`} className="hover:underline">
                   <p className="font-medium">{account.name}</p>
                   <p className="text-xs text-muted-foreground">

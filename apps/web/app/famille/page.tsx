@@ -187,7 +187,7 @@ export default function FamillePage() {
               onChange={(event) => setFamilyName(event.target.value)}
               placeholder="Nom de la famille (ex: Famille Kaboré)"
               required
-              className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
             <Button type="submit" disabled={submitting}>
               {submitting ? 'Création…' : 'Créer'}
@@ -210,7 +210,7 @@ export default function FamillePage() {
 
             <ul className="mt-3 flex flex-col gap-2">
               {family.members.map((m) => (
-                <li key={m.userId} className="flex items-center justify-between text-sm">
+                <li key={m.userId} className="flex flex-wrap items-center justify-between gap-2 text-sm">
                   <span>
                     {m.fullName} <span className="text-xs text-muted-foreground">({m.role === 'owner' ? 'propriétaire' : 'membre'})</span>
                   </span>
@@ -236,7 +236,7 @@ export default function FamillePage() {
                   onChange={(event) => setMemberUserId(event.target.value.trim())}
                   placeholder="Identifiant utilisateur à ajouter"
                   required
-                  className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
                 <Button type="submit" disabled={submitting}>
                   Ajouter
@@ -254,7 +254,7 @@ export default function FamillePage() {
             )}
             <ul className="flex flex-col gap-2">
               {sharedAccounts.map((a) => (
-                <li key={a.id} className="flex items-center justify-between rounded-lg border border-border p-3">
+                <li key={a.id} className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-border p-3">
                   <div>
                     <p className="font-medium">{a.name}</p>
                     <p className="text-xs text-muted-foreground">{a.ownerName}</p>

@@ -352,10 +352,9 @@ export default function ObjectifsPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-center justify-between">
-                      <p className="flex items-center gap-2 font-medium">
-                        {g.name}
-                        <Badge tone={status.tone}>{status.label}</Badge>
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <p className="font-medium">
+                        {g.name} <Badge tone={status.tone}>{status.label}</Badge>
                       </p>
                       <div className="flex items-center gap-3">
                         <Button variant="link" size="sm" onClick={() => startEdit(g)}>
@@ -390,7 +389,7 @@ export default function ObjectifsPage() {
                         }
                         placeholder="Ajouter une contribution"
                         inputMode="decimal"
-                        className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+                        className="min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm"
                       />
                       <Button size="sm" onClick={() => handleContribute(g.goalId)}>
                         Ajouter

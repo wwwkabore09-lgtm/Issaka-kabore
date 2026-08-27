@@ -220,7 +220,7 @@ export default function AssistantPage() {
           onChange={(event) => setInput(event.target.value)}
           placeholder="Comment mieux gérer mes revenus ?"
           disabled={sending}
-          className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-60"
+          className="min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-60"
         />
         <Button type="submit" disabled={sending || !input.trim()} aria-label="Envoyer" className="flex items-center justify-center">
           <Send className="h-4 w-4" aria-hidden="true" />

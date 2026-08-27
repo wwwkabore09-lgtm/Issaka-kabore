@@ -383,7 +383,7 @@ export default function DettesPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
                       <p className="font-medium">
                         {d.counterpartyName}{' '}
                         <span className="text-xs font-normal text-muted-foreground">
@@ -421,7 +421,7 @@ export default function DettesPage() {
                         onChange={(event) => setPaymentAmounts((prev) => ({ ...prev, [d.debtId]: event.target.value }))}
                         placeholder={d.type === 'debt' ? 'Enregistrer un remboursement' : 'Enregistrer un versement reçu'}
                         inputMode="decimal"
-                        className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+                        className="min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm"
                       />
                       <Button size="sm" onClick={() => handlePay(d.debtId)}>
                         Ajouter
