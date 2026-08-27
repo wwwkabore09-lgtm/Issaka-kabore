@@ -63,6 +63,12 @@ export default function RapportsPage() {
   async function handleGenerate(event: React.FormEvent) {
     event.preventDefault();
     if (!accessToken) return;
+    if (period === 'custom' && (!customFrom || !customTo)) {
+      const message = 'Choisissez une date de début et de fin pour la période personnalisée.';
+      setError(message);
+      toast.error(message);
+      return;
+    }
     setGenerating(true);
     setError(null);
     try {
