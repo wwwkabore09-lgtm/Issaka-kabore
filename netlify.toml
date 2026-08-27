@@ -1,0 +1,13 @@
+# Déploiement du frontend Next.js (apps/web) sur Netlify. Le monorepo utilise des workspaces
+# npm (@finza/ui, @finza/shared-types, @finza/config) — l'installation doit donc se faire
+# depuis la racine du dépôt pour que ces packages soient correctement résolus, avant de ne
+# builder que apps/web.
+[build]
+  command = "npm install && npm run build --workspace=apps/web"
+  publish = "apps/web/.next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
