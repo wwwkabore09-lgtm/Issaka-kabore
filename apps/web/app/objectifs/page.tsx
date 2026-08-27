@@ -128,7 +128,7 @@ export default function ObjectifsPage() {
       await updateGoal(goalId, accessToken, {
         name: editName,
         targetAmount: editTargetAmount,
-        targetDate: editTargetDate ? new Date(editTargetDate).toISOString() : undefined,
+        targetDate: editTargetDate ? new Date(editTargetDate).toISOString() : null,
       });
       setEditingId(null);
       toast.success('Objectif modifié.');

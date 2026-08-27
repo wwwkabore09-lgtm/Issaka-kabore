@@ -12,9 +12,11 @@ export class UpdateDebtDto {
   @Matches(/^\d+(\.\d{1,2})?$/, { message: 'principalAmount doit être un montant décimal positif (ex: "50000.00")' })
   principalAmount?: string;
 
+  // undefined = ne pas modifier ; null = effacer l'échéance existante (IsOptional laisse passer
+  // null sans lancer IsISO8601 dessus).
   @IsOptional()
   @IsISO8601()
-  dueDate?: string;
+  dueDate?: string | null;
 
   @IsOptional()
   @IsString()

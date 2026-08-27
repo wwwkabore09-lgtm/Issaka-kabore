@@ -162,7 +162,7 @@ export class GoalsService {
       data.targetAmount = targetAmount;
     }
     if (dto.targetDate !== undefined) {
-      data.targetDate = this.parseFutureDateOrThrow(dto.targetDate, 'targetDate');
+      data.targetDate = dto.targetDate === null ? null : this.parseFutureDateOrThrow(dto.targetDate, 'targetDate');
     }
 
     const updated = await this.prisma.goal.update({ where: { id }, data });

@@ -167,6 +167,31 @@ describe('GoalsController (e2e)', () => {
       .expect(404);
   });
 
+  it('efface une date cible existante en envoyant targetDate: null (distinct de ne pas envoyer le champ)', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post('/goals')
+      .set(...authHeader(accessToken))
+      .send({ name: 'Avec date cible', targetAmount: '5000', targetDate: '2027-01-01T00:00:00.000Z' })
+      .expect(201);
+    expect(createRes.body.targetDate).not.toBeNull();
+
+    // Un PATCH sans le champ targetDate ne doit pas y toucher.
+    const untouched = await request(app.getHttpServer())
+      .patch(`/goals/${createRes.body.id}`)
+      .set(...authHeader(accessToken))
+      .send({ name: 'Toujours avec date cible' })
+      .expect(200);
+    expect(untouched.body.targetDate).not.toBeNull();
+
+    // Un PATCH avec targetDate: null doit explicitement l'effacer.
+    const cleared = await request(app.getHttpServer())
+      .patch(`/goals/${createRes.body.id}`)
+      .set(...authHeader(accessToken))
+      .send({ targetDate: null })
+      .expect(200);
+    expect(cleared.body.targetDate).toBeNull();
+  });
+
   it("calcule le total d'épargne du mois courant et la série mensuelle tous objectifs confondus", async () => {
     const createRes = await request(app.getHttpServer())
       .post('/goals')

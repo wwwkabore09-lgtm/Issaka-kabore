@@ -20,6 +20,7 @@ import { getStoredAccessToken, getStoredUserId } from '@/lib/auth-session';
 import { AppNav } from '@/components/app-nav';
 import { useToast } from '@/components/toast';
 import { useConfirm } from '@/components/confirm-dialog';
+import { endOfDayIso, periodRange, startOfDayIso, type PeriodOption } from '@/lib/date-range';
 
 const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   income: 'Revenu',
@@ -27,28 +28,8 @@ const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   transfer: 'Transfert',
 };
 
-type PeriodFilter = 'all' | 'today' | 'week' | 'month' | 'year' | 'custom';
+type PeriodFilter = 'all' | PeriodOption;
 type SortOrder = 'date_desc' | 'date_asc' | 'amount_desc' | 'amount_asc';
-
-function periodRange(period: PeriodFilter): { from?: string; to?: string } {
-  const now = new Date();
-  if (period === 'today') {
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    return { from: start.toISOString(), to: now.toISOString() };
-  }
-  if (period === 'week') {
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-    return { from: start.toISOString(), to: now.toISOString() };
-  }
-  if (period === 'month') {
-    return { from: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(), to: now.toISOString() };
-  }
-  if (period === 'year') {
-    return { from: new Date(now.getFullYear(), 0, 1).toISOString(), to: now.toISOString() };
-  }
-  return {};
-}
 
 function formatAmount(value: string, currency: string) {
   const symbol = CURRENCIES[currency as keyof typeof CURRENCIES]?.symbol ?? currency;
@@ -74,6 +55,7 @@ export default function TransactionsPage() {
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('date_desc');
 
   const [showForm, setShowForm] = useState(false);
@@ -121,23 +103,33 @@ export default function TransactionsPage() {
   }
 
   useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timeout);
+  }, [search]);
+
+  useEffect(() => {
     if (!accessToken) return;
     void refreshTransactions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accessToken, typeFilter, categoryFilter, periodFilter, customFrom, customTo, search]);
+  }, [accessToken, typeFilter, categoryFilter, periodFilter, customFrom, customTo, debouncedSearch]);
 
   async function refreshTransactions() {
     if (!accessToken) return;
     setLoading(true);
     setError(null);
     try {
-      const range = periodFilter === 'custom' ? { from: customFrom || undefined, to: customTo || undefined } : periodRange(periodFilter);
+      const range =
+        periodFilter === 'custom'
+          ? { from: customFrom ? startOfDayIso(customFrom) : undefined, to: customTo ? endOfDayIso(customTo) : undefined }
+          : periodFilter === 'all'
+            ? {}
+            : periodRange(periodFilter);
       const filters: TransactionFilters = {
         type: typeFilter || undefined,
         categoryId: categoryFilter || undefined,
         from: range.from,
         to: range.to,
-        q: search || undefined,
+        q: debouncedSearch || undefined,
       };
       setTransactions(await listAllTransactions(accessToken, filters));
     } catch (err) {

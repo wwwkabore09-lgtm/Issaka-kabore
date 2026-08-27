@@ -10,27 +10,10 @@ import { getStoredAccessToken } from '@/lib/auth-session';
 import { AppNav } from '@/components/app-nav';
 import { useToast } from '@/components/toast';
 import { useConfirm } from '@/components/confirm-dialog';
+import { endOfDayIso, periodRange, startOfDayIso, type PeriodOption } from '@/lib/date-range';
 
 function formatXof(value: string) {
   return `${Number(value).toLocaleString('fr-FR')} FCFA`;
-}
-
-type PeriodOption = 'today' | 'week' | 'month' | 'year' | 'custom';
-
-function periodRange(period: PeriodOption): { from: string; to: string } {
-  const now = new Date();
-  if (period === 'today') {
-    return { from: new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString(), to: now.toISOString() };
-  }
-  if (period === 'week') {
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-    return { from: start.toISOString(), to: now.toISOString() };
-  }
-  if (period === 'year') {
-    return { from: new Date(now.getFullYear(), 0, 1).toISOString(), to: now.toISOString() };
-  }
-  return { from: new Date(now.getFullYear(), now.getMonth(), 1).toISOString(), to: now.toISOString() };
 }
 
 export default function RapportsPage() {
@@ -83,11 +66,12 @@ export default function RapportsPage() {
     setGenerating(true);
     setError(null);
     try {
-      const range = period === 'custom' ? { from: customFrom, to: customTo } : periodRange(period);
+      const range =
+        period === 'custom' ? { from: startOfDayIso(customFrom), to: endOfDayIso(customTo) } : periodRange(period);
       const report = await generateReport(accessToken, {
         title: title || undefined,
-        from: range.from ? new Date(range.from).toISOString() : undefined,
-        to: range.to ? new Date(range.to).toISOString() : undefined,
+        from: range.from,
+        to: range.to,
       });
       setTitle('');
       setExpandedId(report.id);

@@ -28,7 +28,8 @@ export interface CreateDebtRequest {
 export interface UpdateDebtRequest {
   counterpartyName?: string;
   principalAmount?: string;
-  dueDate?: string;
+  // undefined = ne pas modifier ; null = effacer l'échéance existante.
+  dueDate?: string | null;
   description?: string;
 }
 

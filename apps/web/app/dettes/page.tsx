@@ -136,7 +136,7 @@ export default function DettesPage() {
       await updateDebt(debtId, accessToken, {
         counterpartyName: editCounterpartyName,
         principalAmount: editPrincipalAmount,
-        dueDate: editDueDate ? new Date(editDueDate).toISOString() : undefined,
+        dueDate: editDueDate ? new Date(editDueDate).toISOString() : null,
       });
       setEditingId(null);
       toast.success('Entrée modifiée.');

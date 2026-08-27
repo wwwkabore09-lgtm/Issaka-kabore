@@ -171,4 +171,29 @@ describe('DebtsController (e2e)', () => {
       .set(...authHeader(accessToken))
       .expect(404);
   });
+
+  it('efface une échéance existante en envoyant dueDate: null (distinct de ne pas envoyer le champ)', async () => {
+    const createRes = await request(app.getHttpServer())
+      .post('/debts')
+      .set(...authHeader(accessToken))
+      .send({ type: 'debt', counterpartyName: 'Avec échéance', principalAmount: '5000', dueDate: '2026-12-01T00:00:00.000Z' })
+      .expect(201);
+    expect(createRes.body.dueDate).not.toBeNull();
+
+    // Un PATCH sans le champ dueDate ne doit pas y toucher.
+    const untouched = await request(app.getHttpServer())
+      .patch(`/debts/${createRes.body.id}`)
+      .set(...authHeader(accessToken))
+      .send({ counterpartyName: 'Toujours avec échéance' })
+      .expect(200);
+    expect(untouched.body.dueDate).not.toBeNull();
+
+    // Un PATCH avec dueDate: null doit explicitement l'effacer.
+    const cleared = await request(app.getHttpServer())
+      .patch(`/debts/${createRes.body.id}`)
+      .set(...authHeader(accessToken))
+      .send({ dueDate: null })
+      .expect(200);
+    expect(cleared.body.dueDate).toBeNull();
+  });
 });

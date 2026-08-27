@@ -19,7 +19,8 @@ export interface CreateGoalRequest {
 export interface UpdateGoalRequest {
   name?: string;
   targetAmount?: string;
-  targetDate?: string;
+  // undefined = ne pas modifier ; null = effacer la date cible existante.
+  targetDate?: string | null;
 }
 
 // currentAmount n'est jamais stocké : toujours recalculé à partir des GoalContribution.

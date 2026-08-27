@@ -115,7 +115,7 @@ export class DebtsService {
       data.principalAmount = principalAmount;
     }
     if (dto.dueDate !== undefined) {
-      data.dueDate = new Date(dto.dueDate);
+      data.dueDate = dto.dueDate === null ? null : new Date(dto.dueDate);
     }
     if (dto.description !== undefined) {
       data.description = dto.description;
