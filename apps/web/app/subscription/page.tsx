@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Crown, Loader2, Sparkles } from 'lucide-react';
 import type { PaymentDto, PremiumSubscriptionDto } from '@finza/shared-types';
-import { cn } from '@finza/ui';
+import { Badge, Button } from '@finza/ui';
 import { getPremiumStatus, listPremiumPayments, subscribeToPremium, updateAutoRenew } from '@/lib/api';
 import { getStoredAccessToken } from '@/lib/auth-session';
 import { AppNav } from '@/components/app-nav';
@@ -208,18 +208,10 @@ export default function SubscriptionPage() {
                   Abonnement actif
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={handleSubscribe}
-                  disabled={subscribing}
-                  className={cn(
-                    'flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90',
-                    subscribing && 'opacity-60',
-                  )}
-                >
+                <Button onClick={handleSubscribe} disabled={subscribing} className="flex items-center gap-2">
                   {subscribing && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
                   {subscribing ? 'Paiement en cours…' : status === 'expired' || status === 'cancelled' ? 'Renouveler Premium' : 'Passer à Premium'}
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -246,17 +238,15 @@ export default function SubscriptionPage() {
                 </div>
               </dl>
               {isPremium && (
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="sm"
                   disabled={togglingAutoRenew}
                   onClick={() => void handleToggleAutoRenew(!subscription.autoRenew)}
-                  className={cn(
-                    'mt-4 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground',
-                    togglingAutoRenew && 'opacity-60',
-                  )}
+                  className="mt-4"
                 >
                   {subscription.autoRenew ? 'Annuler le renouvellement' : 'Réactiver le renouvellement'}
-                </button>
+                </Button>
               )}
             </div>
           )}
@@ -279,17 +269,9 @@ export default function SubscriptionPage() {
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <span className="font-medium">{formatXof(p.amount)}</span>
-                      <span
-                        className={cn(
-                          'rounded-full px-2 py-0.5 text-xs font-medium',
-                          p.status === 'successful' && 'bg-primary/10 text-primary',
-                          (p.status === 'failed' || p.status === 'cancelled') && 'bg-destructive/10 text-destructive',
-                          (p.status === 'pending' || p.status === 'processing') && 'bg-muted text-muted-foreground',
-                          p.status === 'refunded' && 'bg-muted text-muted-foreground',
-                        )}
-                      >
+                      <Badge tone={p.status === 'successful' ? 'success' : p.status === 'failed' || p.status === 'cancelled' ? 'danger' : 'muted'}>
                         {PAYMENT_STATUS_LABELS[p.status] ?? p.status}
-                      </span>
+                      </Badge>
                     </div>
                   </li>
                 ))}

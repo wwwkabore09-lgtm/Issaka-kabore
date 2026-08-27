@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Repeat } from 'lucide-react';
 import type { BillingFrequency, SubscriptionDto, SubscriptionsSummaryDto } from '@finza/shared-types';
 import { BILLING_FREQUENCIES } from '@finza/shared-types';
-import { cn } from '@finza/ui';
+import { Button, EmptyState, cn } from '@finza/ui';
 import {
   createSubscription,
   deleteSubscription,
@@ -286,29 +286,20 @@ export default function AbonnementsPage() {
           className="rounded-md border border-input bg-background px-3 py-2 text-sm"
         />
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className={cn(
-            'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
-            submitting && 'opacity-60',
-          )}
-        >
+        <Button type="submit" disabled={submitting}>
           {submitting ? 'Création…' : 'Ajouter'}
-        </button>
+        </Button>
       </form>
 
       <div className="flex flex-col gap-2">
         <h2 className="font-medium">Vos abonnements {loading && '(chargement…)'}</h2>
 
         {!loading && subscriptions.length === 0 && (
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border p-8 text-center">
-            <Repeat className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
-            <p className="font-medium">Aucun abonnement enregistré</p>
-            <p className="text-sm text-muted-foreground">
-              Ajoutez vos paiements récurrents pour suivre leur coût mensuel total.
-            </p>
-          </div>
+          <EmptyState
+            icon={Repeat}
+            title="Aucun abonnement enregistré"
+            description="Ajoutez vos paiements récurrents pour suivre leur coût mensuel total."
+          />
         )}
 
         <ul className="flex flex-col gap-2">
@@ -371,24 +362,12 @@ export default function AbonnementsPage() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button
-                        type="button"
-                        disabled={savingEdit}
-                        onClick={() => handleSaveEdit(s.id)}
-                        className={cn(
-                          'rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground',
-                          savingEdit && 'opacity-60',
-                        )}
-                      >
+                      <Button size="sm" disabled={savingEdit} onClick={() => handleSaveEdit(s.id)}>
                         {savingEdit ? 'Enregistrement…' : 'Enregistrer'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditingId(null)}
-                        className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground"
-                      >
+                      </Button>
+                      <Button variant="secondary" size="sm" onClick={() => setEditingId(null)}>
                         Annuler
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -401,23 +380,24 @@ export default function AbonnementsPage() {
                       {BILLING_FREQUENCY_LABELS[s.billingFrequency]} · {formatXof(s.monthlyEquivalent)}/mois équiv. ·
                       prochaine échéance {formatDaysUntil(s.daysUntilNextBilling)}
                     </p>
-                    <div className="mt-2 flex items-center gap-3 text-xs">
-                      <button type="button" onClick={() => handleRenew(s.id)} className="text-primary underline">
-                        Renouveler
-                      </button>
-                      <button type="button" onClick={() => startEdit(s)} className="text-muted-foreground underline">
-                        Modifier
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleActive(s)}
-                        className="text-muted-foreground underline"
+                    <div className="mt-2 flex items-center gap-3">
+                      <Button
+                        variant="link"
+                        size="sm"
+                        onClick={() => handleRenew(s.id)}
+                        className="text-primary hover:text-primary/80"
                       >
+                        Renouveler
+                      </Button>
+                      <Button variant="link" size="sm" onClick={() => startEdit(s)}>
+                        Modifier
+                      </Button>
+                      <Button variant="link" size="sm" onClick={() => handleToggleActive(s)}>
                         {s.isActive ? 'Désactiver' : 'Réactiver'}
-                      </button>
-                      <button type="button" onClick={() => handleDelete(s)} className="text-destructive underline">
+                      </Button>
+                      <Button variant="danger" size="sm" onClick={() => handleDelete(s)}>
                         Supprimer
-                      </button>
+                      </Button>
                     </div>
                   </>
                 )}

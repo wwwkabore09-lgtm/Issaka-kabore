@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, Send, Sparkles } from 'lucide-react';
 import type { ChatTurn } from '@finza/shared-types';
-import { cn } from '@finza/ui';
+import { Button, cn } from '@finza/ui';
 import { askAiAdvice, getAiSummary } from '@/lib/api';
 import { getStoredAccessToken } from '@/lib/auth-session';
 import { AppNav } from '@/components/app-nav';
@@ -114,13 +114,9 @@ export default function AssistantPage() {
           </div>
         </div>
         {messages.length > 0 && (
-          <button
-            type="button"
-            onClick={handleNewConversation}
-            className="whitespace-nowrap rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
-          >
+          <Button variant="secondary" size="sm" onClick={handleNewConversation} className="whitespace-nowrap">
             Nouvelle conversation
-          </button>
+          </Button>
         )}
       </div>
 
@@ -226,17 +222,9 @@ export default function AssistantPage() {
           disabled={sending}
           className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-60"
         />
-        <button
-          type="submit"
-          disabled={sending || !input.trim()}
-          aria-label="Envoyer"
-          className={cn(
-            'flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
-            (sending || !input.trim()) && 'opacity-50',
-          )}
-        >
+        <Button type="submit" disabled={sending || !input.trim()} aria-label="Envoyer" className="flex items-center justify-center">
           <Send className="h-4 w-4" aria-hidden="true" />
-        </button>
+        </Button>
       </form>
     </main>
   );

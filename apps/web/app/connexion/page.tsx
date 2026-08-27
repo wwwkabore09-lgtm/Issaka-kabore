@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { cn } from '@finza/ui';
+import { Button } from '@finza/ui';
 import { login } from '@/lib/api';
 import { saveSession } from '@/lib/auth-session';
 
@@ -74,16 +74,9 @@ export default function ConnexionPage() {
           required
           className="rounded-md border border-input bg-background px-3 py-2 text-sm"
         />
-        <button
-          type="submit"
-          disabled={submitting}
-          className={cn(
-            'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
-            submitting && 'opacity-60',
-          )}
-        >
+        <Button type="submit" disabled={submitting}>
           {submitting ? 'Connexion…' : 'Se connecter'}
-        </button>
+        </Button>
       </form>
 
       <p className="text-center text-sm text-muted-foreground">

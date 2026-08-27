@@ -10,7 +10,6 @@
     "predev:api": "npm run build:packages",
     "dev:web": "npm run dev --workspace=apps/web",
     "dev:api": "npm run start:dev --workspace=apps/api",
-    "dev:admin": "npm run dev --workspace=apps/admin",
     "build": "npm run build:packages && npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",

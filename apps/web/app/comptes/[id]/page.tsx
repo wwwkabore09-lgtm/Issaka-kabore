@@ -13,7 +13,7 @@ import type {
 } from '@finza/shared-types';
 import { TRANSACTION_TYPES } from '@finza/shared-types';
 import { CURRENCIES } from '@finza/config';
-import { cn } from '@finza/ui';
+import { Button, cn } from '@finza/ui';
 import {
   createBudget,
   createTransaction,
@@ -270,13 +270,9 @@ export default function CompteDetailPage() {
           </p>
         )}
         {account && (
-          <button
-            type="button"
-            onClick={handleToggleShare}
-            className="mt-1 text-xs text-muted-foreground underline"
-          >
+          <Button variant="link" size="sm" onClick={handleToggleShare} className="mt-1">
             {account.isSharedWithFamily ? '✓ Partagé avec la famille — retirer le partage' : 'Partager avec la famille'}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -322,20 +318,12 @@ export default function CompteDetailPage() {
                         {account ? formatAmount(b.spent, account.currency) : b.spent} /{' '}
                         {account ? formatAmount(b.limit, account.currency) : b.limit}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => startEditBudget(b)}
-                        className="text-xs text-muted-foreground underline"
-                      >
+                      <Button variant="link" size="sm" onClick={() => startEditBudget(b)}>
                         Modifier
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteBudget(b)}
-                        className="text-xs text-destructive underline"
-                      >
+                      </Button>
+                      <Button variant="danger" size="sm" onClick={() => handleDeleteBudget(b)}>
                         Supprimer
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -351,24 +339,12 @@ export default function CompteDetailPage() {
                       inputMode="decimal"
                       className="w-32 rounded-md border border-input bg-background px-3 py-1.5 text-sm"
                     />
-                    <button
-                      type="button"
-                      disabled={savingBudgetEdit}
-                      onClick={() => handleSaveBudgetEdit(b.budgetId)}
-                      className={cn(
-                        'rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground',
-                        savingBudgetEdit && 'opacity-60',
-                      )}
-                    >
+                    <Button size="sm" disabled={savingBudgetEdit} onClick={() => handleSaveBudgetEdit(b.budgetId)}>
                       {savingBudgetEdit ? 'Enregistrement…' : 'Enregistrer'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditingBudgetId(null)}
-                      className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground"
-                    >
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={() => setEditingBudgetId(null)}>
                       Annuler
-                    </button>
+                    </Button>
                   </div>
                 ) : (
                   <>
@@ -424,16 +400,9 @@ export default function CompteDetailPage() {
               required
               className="w-40 rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
-            <button
-              type="submit"
-              disabled={submittingBudget}
-              className={cn(
-                'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
-                submittingBudget && 'opacity-60',
-              )}
-            >
+            <Button type="submit" disabled={submittingBudget}>
               {submittingBudget ? 'Ajout…' : 'Définir un budget'}
-            </button>
+            </Button>
           </form>
         )}
       </div>
@@ -531,16 +500,9 @@ export default function CompteDetailPage() {
           className="rounded-md border border-input bg-background px-3 py-2 text-sm"
         />
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className={cn(
-            'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
-            submitting && 'opacity-60',
-          )}
-        >
+        <Button type="submit" disabled={submitting}>
           {submitting ? 'Ajout…' : 'Ajouter'}
-        </button>
+        </Button>
       </form>
 
       <div className="flex flex-col gap-2">

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { FamilyDto, SharedAccountDto } from '@finza/shared-types';
-import { cn } from '@finza/ui';
+import { Button } from '@finza/ui';
 import {
   addFamilyMember,
   createFamily,
@@ -189,16 +189,9 @@ export default function FamillePage() {
               required
               className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
-            <button
-              type="submit"
-              disabled={submitting}
-              className={cn(
-                'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
-                submitting && 'opacity-60',
-              )}
-            >
+            <Button type="submit" disabled={submitting}>
               {submitting ? 'Création…' : 'Créer'}
-            </button>
+            </Button>
           </div>
         </form>
       )}
@@ -209,9 +202,9 @@ export default function FamillePage() {
             <div className="flex items-center justify-between">
               <h2 className="font-medium">{family.name}</h2>
               {isOwner && (
-                <button type="button" onClick={handleDeleteFamily} className="text-xs text-destructive underline">
+                <Button variant="danger" size="sm" onClick={handleDeleteFamily}>
                   Supprimer la famille
-                </button>
+                </Button>
               )}
             </div>
 
@@ -223,13 +216,9 @@ export default function FamillePage() {
                   </span>
                   {(isOwner && m.role !== 'owner') || m.userId === userId ? (
                     m.role !== 'owner' && (
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveMember(m.userId, m.userId === userId)}
-                        className="text-xs text-destructive underline"
-                      >
+                      <Button variant="danger" size="sm" onClick={() => handleRemoveMember(m.userId, m.userId === userId)}>
                         {m.userId === userId ? 'Quitter' : 'Retirer'}
-                      </button>
+                      </Button>
                     )
                   ) : null}
                 </li>
@@ -249,16 +238,9 @@ export default function FamillePage() {
                   required
                   className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className={cn(
-                    'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
-                    submitting && 'opacity-60',
-                  )}
-                >
+                <Button type="submit" disabled={submitting}>
                   Ajouter
-                </button>
+                </Button>
               </form>
             )}
           </div>

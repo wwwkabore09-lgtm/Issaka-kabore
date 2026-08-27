@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Target } from 'lucide-react';
 import type { AccountDto, GoalContributionDto, GoalProgressDto } from '@finza/shared-types';
-import { cn } from '@finza/ui';
+import { Badge, Button, EmptyState, cn, type BadgeTone } from '@finza/ui';
 import {
   addGoalContribution,
   createGoal,
@@ -23,10 +23,10 @@ function formatXof(value: string) {
   return `${Number(value).toLocaleString('fr-FR')} FCFA`;
 }
 
-function goalStatus(g: GoalProgressDto): { label: string; className: string } {
-  if (g.isAchieved) return { label: '✓ Atteint', className: 'bg-primary/10 text-primary' };
-  if (g.percentage >= 80) return { label: 'Presque atteint', className: 'bg-amber-500/10 text-amber-600' };
-  return { label: 'En cours', className: 'bg-muted text-muted-foreground' };
+function goalStatus(g: GoalProgressDto): { label: string; tone: BadgeTone } {
+  if (g.isAchieved) return { label: '✓ Atteint', tone: 'success' };
+  if (g.percentage >= 80) return { label: 'Presque atteint', tone: 'warning' };
+  return { label: 'En cours', tone: 'muted' };
 }
 
 export default function ObjectifsPage() {
@@ -282,29 +282,20 @@ export default function ObjectifsPage() {
           ))}
         </select>
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className={cn(
-            'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
-            submitting && 'opacity-60',
-          )}
-        >
+        <Button type="submit" disabled={submitting}>
           {submitting ? 'Création…' : "Créer l'objectif"}
-        </button>
+        </Button>
       </form>
 
       <div className="flex flex-col gap-3">
         <h2 className="font-medium">Vos objectifs {loading && '(chargement…)'}</h2>
 
         {!loading && goals.length === 0 && (
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border p-8 text-center">
-            <Target className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
-            <p className="font-medium">Aucun objectif enregistré</p>
-            <p className="text-sm text-muted-foreground">
-              Créez votre premier objectif d&apos;épargne pour commencer à suivre votre progression.
-            </p>
-          </div>
+          <EmptyState
+            icon={Target}
+            title="Aucun objectif enregistré"
+            description="Créez votre premier objectif d'épargne pour commencer à suivre votre progression."
+          />
         )}
 
         <ul className="flex flex-col gap-3">
@@ -351,24 +342,12 @@ export default function ObjectifsPage() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button
-                        type="button"
-                        disabled={savingEdit}
-                        onClick={() => handleSaveEdit(g.goalId)}
-                        className={cn(
-                          'rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground',
-                          savingEdit && 'opacity-60',
-                        )}
-                      >
+                      <Button size="sm" disabled={savingEdit} onClick={() => handleSaveEdit(g.goalId)}>
                         {savingEdit ? 'Enregistrement…' : 'Enregistrer'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditingId(null)}
-                        className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground"
-                      >
+                      </Button>
+                      <Button variant="secondary" size="sm" onClick={() => setEditingId(null)}>
                         Annuler
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -376,25 +355,15 @@ export default function ObjectifsPage() {
                     <div className="flex items-center justify-between">
                       <p className="flex items-center gap-2 font-medium">
                         {g.name}
-                        <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', status.className)}>
-                          {status.label}
-                        </span>
+                        <Badge tone={status.tone}>{status.label}</Badge>
                       </p>
                       <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => startEdit(g)}
-                          className="text-xs text-muted-foreground underline"
-                        >
+                        <Button variant="link" size="sm" onClick={() => startEdit(g)}>
                           Modifier
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(g)}
-                          className="text-xs text-destructive underline"
-                        >
+                        </Button>
+                        <Button variant="danger" size="sm" onClick={() => handleDelete(g)}>
                           Supprimer
-                        </button>
+                        </Button>
                       </div>
                     </div>
                     <p className="text-sm text-muted-foreground">
@@ -423,20 +392,12 @@ export default function ObjectifsPage() {
                         inputMode="decimal"
                         className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm"
                       />
-                      <button
-                        type="button"
-                        onClick={() => handleContribute(g.goalId)}
-                        className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
-                      >
+                      <Button size="sm" onClick={() => handleContribute(g.goalId)}>
                         Ajouter
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => toggleHistory(g.goalId)}
-                        className="text-xs text-muted-foreground underline"
-                      >
+                      </Button>
+                      <Button variant="link" size="sm" onClick={() => toggleHistory(g.goalId)}>
                         {expandedGoalId === g.goalId ? 'Masquer' : 'Historique'}
-                      </button>
+                      </Button>
                     </div>
 
                     {expandedGoalId === g.goalId && (

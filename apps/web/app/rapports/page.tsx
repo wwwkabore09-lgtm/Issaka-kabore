@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FileBarChart } from 'lucide-react';
 import type { ReportDto } from '@finza/shared-types';
-import { cn } from '@finza/ui';
+import { Button, EmptyState } from '@finza/ui';
 import { deleteReport, generateReport, listReports } from '@/lib/api';
 import { getStoredAccessToken } from '@/lib/auth-session';
 import { AppNav } from '@/components/app-nav';
@@ -199,27 +199,20 @@ export default function RapportsPage() {
             </div>
           </div>
         )}
-        <button
-          type="submit"
-          disabled={generating}
-          className={cn(
-            'self-start rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
-            generating && 'opacity-60',
-          )}
-        >
+        <Button type="submit" disabled={generating} className="self-start">
           {generating ? 'Génération…' : 'Générer'}
-        </button>
+        </Button>
       </form>
 
       <div className="flex flex-col gap-3">
         <h2 className="font-medium">Historique {loading && '(chargement…)'}</h2>
 
         {!loading && reports.length === 0 && (
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border p-8 text-center">
-            <FileBarChart className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
-            <p className="font-medium">Aucun rapport généré</p>
-            <p className="text-sm text-muted-foreground">Générez votre premier rapport pour figer un instantané de vos finances.</p>
-          </div>
+          <EmptyState
+            icon={FileBarChart}
+            title="Aucun rapport généré"
+            description="Générez votre premier rapport pour figer un instantané de vos finances."
+          />
         )}
 
         <ul className="flex flex-col gap-3">
@@ -235,9 +228,9 @@ export default function RapportsPage() {
                   >
                     {r.title}
                   </button>
-                  <button type="button" onClick={() => handleDelete(r)} className="text-xs text-destructive underline">
+                  <Button variant="danger" size="sm" onClick={() => handleDelete(r)}>
                     Supprimer
-                  </button>
+                  </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {new Date(r.periodStart).toLocaleDateString('fr-FR')} → {new Date(r.periodEnd).toLocaleDateString('fr-FR')}{' '}

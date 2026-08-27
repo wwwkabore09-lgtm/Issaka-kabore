@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { HandCoins } from 'lucide-react';
 import type { AccountDto, DebtDirection, DebtPaymentDto, DebtProgressDto } from '@finza/shared-types';
 import { DEBT_DIRECTIONS } from '@finza/shared-types';
-import { cn } from '@finza/ui';
+import { Button, EmptyState, cn } from '@finza/ui';
 import {
   addDebtPayment,
   createDebt,
@@ -297,16 +297,9 @@ export default function DettesPage() {
           ))}
         </select>
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className={cn(
-            'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
-            submitting && 'opacity-60',
-          )}
-        >
+        <Button type="submit" disabled={submitting}>
           {submitting ? 'Création…' : 'Ajouter'}
-        </button>
+        </Button>
       </form>
 
       <div className="flex flex-col gap-3">
@@ -330,11 +323,11 @@ export default function DettesPage() {
         </div>
 
         {!loading && visibleDebts.length === 0 && (
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border p-8 text-center">
-            <HandCoins className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
-            <p className="font-medium">Aucune dette ni créance enregistrée</p>
-            <p className="text-sm text-muted-foreground">Ajoutez votre première entrée pour la suivre ici.</p>
-          </div>
+          <EmptyState
+            icon={HandCoins}
+            title="Aucune dette ni créance enregistrée"
+            description="Ajoutez votre première entrée pour la suivre ici."
+          />
         )}
 
         <ul className="flex flex-col gap-3">
@@ -380,24 +373,12 @@ export default function DettesPage() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button
-                        type="button"
-                        disabled={savingEdit}
-                        onClick={() => handleSaveEdit(d.debtId)}
-                        className={cn(
-                          'rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground',
-                          savingEdit && 'opacity-60',
-                        )}
-                      >
+                      <Button size="sm" disabled={savingEdit} onClick={() => handleSaveEdit(d.debtId)}>
                         {savingEdit ? 'Enregistrement…' : 'Enregistrer'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditingId(null)}
-                        className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground"
-                      >
+                      </Button>
+                      <Button variant="secondary" size="sm" onClick={() => setEditingId(null)}>
                         Annuler
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -411,20 +392,12 @@ export default function DettesPage() {
                         {d.isSettled && <span className="text-primary">✓ Soldé</span>}
                       </p>
                       <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => startEdit(d)}
-                          className="text-xs text-muted-foreground underline"
-                        >
+                        <Button variant="link" size="sm" onClick={() => startEdit(d)}>
                           Modifier
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(d)}
-                          className="text-xs text-destructive underline"
-                        >
+                        </Button>
+                        <Button variant="danger" size="sm" onClick={() => handleDelete(d)}>
                           Supprimer
-                        </button>
+                        </Button>
                       </div>
                     </div>
                     <p className="text-sm text-muted-foreground">
@@ -450,20 +423,12 @@ export default function DettesPage() {
                         inputMode="decimal"
                         className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm"
                       />
-                      <button
-                        type="button"
-                        onClick={() => handlePay(d.debtId)}
-                        className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
-                      >
+                      <Button size="sm" onClick={() => handlePay(d.debtId)}>
                         Ajouter
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => toggleHistory(d.debtId)}
-                        className="text-xs text-muted-foreground underline"
-                      >
+                      </Button>
+                      <Button variant="link" size="sm" onClick={() => toggleHistory(d.debtId)}>
                         {expandedDebtId === d.debtId ? 'Masquer' : 'Historique'}
-                      </button>
+                      </Button>
                     </div>
 
                     {expandedDebtId === d.debtId && (

@@ -15,7 +15,7 @@ import {
   type RevenueOverviewDto,
 } from '@finza/shared-types';
 import { COUNTRIES, CURRENCIES, LAUNCH_COUNTRY } from '@finza/config';
-import { cn } from '@finza/ui';
+import { Button, EmptyState, cn } from '@finza/ui';
 import {
   createAccount,
   deleteAccount,
@@ -211,9 +211,9 @@ export default function ComptesPage() {
         <span>
           Connecté : <span className="font-medium">{sessionEmail}</span>
         </span>
-        <button type="button" onClick={handleLogout} className="text-xs text-muted-foreground underline">
+        <Button variant="link" size="sm" onClick={handleLogout}>
           Se déconnecter
-        </button>
+        </Button>
       </div>
 
       {error && (
@@ -256,9 +256,9 @@ export default function ComptesPage() {
         <div className="flex items-center justify-between">
           <h2 className="font-medium">Mes revenus</h2>
           {!showForm && (
-            <button type="button" onClick={() => setShowForm(true)} className="text-xs text-primary underline">
+            <Button variant="link" size="sm" onClick={() => setShowForm(true)} className="text-primary hover:text-primary/80">
               + Ajouter un revenu
-            </button>
+            </Button>
           )}
         </div>
 
@@ -345,42 +345,23 @@ export default function ComptesPage() {
             )}
 
             <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={submitting}
-                className={cn(
-                  'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
-                  submitting && 'opacity-60',
-                )}
-              >
+              <Button type="submit" disabled={submitting}>
                 {submitting ? 'Enregistrement…' : editingId ? 'Enregistrer' : 'Ajouter'}
-              </button>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="rounded-md border border-border px-4 py-2 text-sm font-medium text-muted-foreground"
-              >
+              </Button>
+              <Button type="button" variant="secondary" onClick={resetForm}>
                 Annuler
-              </button>
+              </Button>
             </div>
           </form>
         )}
 
         {!loading && accounts.length === 0 && !showForm && (
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border p-8 text-center">
-            <Banknote className="h-8 w-8 text-muted-foreground" aria-hidden="true" />
-            <p className="font-medium">Aucun revenu enregistré</p>
-            <p className="text-sm text-muted-foreground">
-              Ajoutez votre premier revenu pour commencer à suivre vos finances.
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowForm(true)}
-              className="mt-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-            >
-              Ajouter un revenu
-            </button>
-          </div>
+          <EmptyState
+            icon={Banknote}
+            title="Aucun revenu enregistré"
+            description="Ajoutez votre premier revenu pour commencer à suivre vos finances."
+            action={<Button onClick={() => setShowForm(true)}>Ajouter un revenu</Button>}
+          />
         )}
 
         <ul className="flex flex-col gap-2">
@@ -399,23 +380,15 @@ export default function ComptesPage() {
                 <span className="font-medium">{formatAmount(account.currentBalance, account.currency)}</span>
               </div>
               <div className="mt-2 flex items-center gap-3 text-xs">
-                <button type="button" onClick={() => startEdit(account)} className="text-muted-foreground underline">
+                <Button variant="link" size="sm" onClick={() => startEdit(account)}>
                   Modifier
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleToggleActive(account)}
-                  className="text-muted-foreground underline"
-                >
+                </Button>
+                <Button variant="link" size="sm" onClick={() => handleToggleActive(account)}>
                   {account.isActive ? 'Désactiver' : 'Réactiver'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(account)}
-                  className="text-destructive underline"
-                >
+                </Button>
+                <Button variant="danger" size="sm" onClick={() => handleDelete(account)}>
                   Supprimer
-                </button>
+                </Button>
                 <Link href={`/comptes/${account.id}`} className="text-muted-foreground underline">
                   Historique →
                 </Link>

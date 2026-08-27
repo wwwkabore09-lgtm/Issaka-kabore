@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShieldAlert } from 'lucide-react';
 import type { AdminPaymentDto, AdminPremiumStatsDto } from '@finza/shared-types';
-import { cn } from '@finza/ui';
+import { Badge, EmptyState } from '@finza/ui';
 import { getAdminPremiumStats, getMe, listAdminPremiumTransactions } from '@/lib/api';
 import { getStoredAccessToken } from '@/lib/auth-session';
 import { AppNav } from '@/components/app-nav';
@@ -86,10 +86,7 @@ export default function AdminAbonnementsPage() {
     return (
       <main className="mx-auto flex max-w-2xl flex-col gap-8 p-8">
         <AppNav />
-        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border p-10 text-center">
-          <ShieldAlert className="h-10 w-10 text-muted-foreground" aria-hidden="true" />
-          <p className="font-medium">Accès réservé aux administrateurs</p>
-        </div>
+        <EmptyState icon={ShieldAlert} title="Accès réservé aux administrateurs" />
       </main>
     );
   }
@@ -170,17 +167,9 @@ export default function AdminAbonnementsPage() {
                           <td className="px-3 py-2 text-muted-foreground">{formatDate(tx.createdAt)}</td>
                           <td className="px-3 py-2 font-medium">{formatXof(tx.amount)}</td>
                           <td className="px-3 py-2">
-                            <span
-                              className={cn(
-                                'rounded-full px-2 py-0.5 text-xs font-medium',
-                                tx.status === 'successful' && 'bg-primary/10 text-primary',
-                                (tx.status === 'failed' || tx.status === 'cancelled') && 'bg-destructive/10 text-destructive',
-                                (tx.status === 'pending' || tx.status === 'processing') && 'bg-muted text-muted-foreground',
-                                tx.status === 'refunded' && 'bg-muted text-muted-foreground',
-                              )}
-                            >
+                            <Badge tone={tx.status === 'successful' ? 'success' : tx.status === 'failed' || tx.status === 'cancelled' ? 'danger' : 'muted'}>
                               {PAYMENT_STATUS_LABELS[tx.status] ?? tx.status}
-                            </span>
+                            </Badge>
                           </td>
                           <td className="px-3 py-2 text-xs text-muted-foreground">{tx.providerTransactionId ?? '—'}</td>
                         </tr>

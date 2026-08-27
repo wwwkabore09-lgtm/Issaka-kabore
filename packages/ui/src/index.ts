@@ -1,4 +1,5 @@
 export * from './lib/utils';
-
-// Les composants partagés (Button, Card, Input, ...) sont ajoutés ici
-// au fur et à mesure des besoins des features.
+export * from './components/button';
+export * from './components/badge';
+export * from './components/card';
+export * from './components/empty-state';

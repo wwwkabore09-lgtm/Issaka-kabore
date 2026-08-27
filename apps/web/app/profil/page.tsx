@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { UserRound } from 'lucide-react';
 import { FINANCIAL_SITUATIONS, REVENUE_FREQUENCIES, type FinancialSituation, type RevenueFrequency } from '@finza/shared-types';
 import { COUNTRIES } from '@finza/config';
-import { cn } from '@finza/ui';
+import { Button } from '@finza/ui';
 import { getMe, updateProfile } from '@/lib/api';
 import { getStoredAccessToken } from '@/lib/auth-session';
 import { AppNav } from '@/components/app-nav';
@@ -202,16 +202,9 @@ export default function ProfilPage() {
             </select>
           </div>
 
-          <button
-            type="submit"
-            disabled={saving}
-            className={cn(
-              'self-start rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
-              saving && 'opacity-60',
-            )}
-          >
+          <Button type="submit" disabled={saving} className="self-start">
             {saving ? 'Enregistrement…' : 'Enregistrer'}
-          </button>
+          </Button>
         </form>
       )}
     </main>

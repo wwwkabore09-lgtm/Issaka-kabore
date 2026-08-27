@@ -6,7 +6,7 @@ import { Receipt } from 'lucide-react';
 import type { AccountDto, CategoryDto, TransactionDto, TransactionType } from '@finza/shared-types';
 import { TRANSACTION_TYPES } from '@finza/shared-types';
 import { CURRENCIES } from '@finza/config';
-import { cn } from '@finza/ui';
+import { Badge, Button, EmptyState, cn, type BadgeTone } from '@finza/ui';
 import {
   createTransaction,
   deleteTransaction,
@@ -26,6 +26,12 @@ const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   income: 'Revenu',
   expense: 'Dépense',
   transfer: 'Transfert',
+};
+
+const TRANSACTION_TYPE_TONES: Record<TransactionType, BadgeTone> = {
+  income: 'success',
+  expense: 'danger',
+  transfer: 'muted',
 };
 
 type PeriodFilter = 'all' | PeriodOption;
@@ -262,13 +268,9 @@ export default function TransactionsPage() {
           <p className="text-sm text-muted-foreground">Tous vos revenus et dépenses, tous comptes confondus.</p>
         </div>
         {!showForm && accounts.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setShowForm(true)}
-            className="whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
-          >
+          <Button onClick={() => setShowForm(true)} className="whitespace-nowrap">
             + Ajouter
-          </button>
+          </Button>
         )}
       </div>
 
@@ -279,12 +281,10 @@ export default function TransactionsPage() {
       )}
 
       {accounts.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border p-10 text-center">
-          <p className="font-medium">Aucun compte pour le moment</p>
-          <p className="text-sm text-muted-foreground">
-            Créez d&apos;abord une source de revenus dans « Comptes » pour pouvoir enregistrer des transactions.
-          </p>
-        </div>
+        <EmptyState
+          title="Aucun compte pour le moment"
+          description="Créez d'abord une source de revenus dans « Comptes » pour pouvoir enregistrer des transactions."
+        />
       )}
 
       {showForm && accounts.length > 0 && (
@@ -416,23 +416,12 @@ export default function TransactionsPage() {
           </div>
 
           <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={submitting}
-              className={cn(
-                'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
-                submitting && 'opacity-60',
-              )}
-            >
+            <Button type="submit" disabled={submitting}>
               {submitting ? 'Ajout…' : 'Ajouter'}
-            </button>
-            <button
-              type="button"
-              onClick={resetForm}
-              className="rounded-md border border-border px-4 py-2 text-sm font-medium text-muted-foreground"
-            >
+            </Button>
+            <Button type="button" variant="secondary" onClick={resetForm}>
               Annuler
-            </button>
+            </Button>
           </div>
         </form>
       )}
@@ -553,22 +542,14 @@ export default function TransactionsPage() {
       )}
 
       {accounts.length > 0 && !loading && sortedTransactions.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border p-10 text-center">
-          <Receipt className="h-10 w-10 text-muted-foreground" aria-hidden="true" />
-          <p className="font-medium">Aucune transaction enregistrée</p>
-          <p className="text-sm text-muted-foreground">
-            Ajoutez votre premier revenu ou votre première dépense pour commencer à suivre vos finances.
-          </p>
-          {!showForm && (
-            <button
-              type="button"
-              onClick={() => setShowForm(true)}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-            >
-              Ajouter une transaction
-            </button>
-          )}
-        </div>
+        <EmptyState
+          icon={Receipt}
+          title="Aucune transaction enregistrée"
+          description="Ajoutez votre premier revenu ou votre première dépense pour commencer à suivre vos finances."
+          action={
+            !showForm && <Button onClick={() => setShowForm(true)}>Ajouter une transaction</Button>
+          }
+        />
       )}
 
       <ul className="flex flex-col gap-2">
@@ -584,16 +565,7 @@ export default function TransactionsPage() {
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        'rounded-full px-2 py-0.5 text-xs font-medium',
-                        t.type === 'income' && 'bg-primary/10 text-primary',
-                        t.type === 'expense' && 'bg-destructive/10 text-destructive',
-                        t.type === 'transfer' && 'bg-muted text-muted-foreground',
-                      )}
-                    >
-                      {TRANSACTION_TYPE_LABELS[t.type]}
-                    </span>
+                    <Badge tone={TRANSACTION_TYPE_TONES[t.type]}>{TRANSACTION_TYPE_LABELS[t.type]}</Badge>
                     <p className="truncate font-medium">
                       {t.type === 'transfer' ? `${account?.name ?? '—'} → ${destination?.name ?? '—'}` : (category?.label ?? '—')}
                     </p>
@@ -615,12 +587,12 @@ export default function TransactionsPage() {
                   </span>
                   {!isEditing && (
                     <>
-                      <button type="button" onClick={() => startEdit(t)} className="text-xs text-muted-foreground underline">
+                      <Button variant="link" size="sm" onClick={() => startEdit(t)}>
                         Modifier
-                      </button>
-                      <button type="button" onClick={() => handleDelete(t)} className="text-xs text-destructive underline">
+                      </Button>
+                      <Button variant="danger" size="sm" onClick={() => handleDelete(t)}>
                         Supprimer
-                      </button>
+                      </Button>
                     </>
                   )}
                 </div>
@@ -671,24 +643,12 @@ export default function TransactionsPage() {
                       className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
                     />
                   </div>
-                  <button
-                    type="button"
-                    disabled={savingEdit}
-                    onClick={() => handleSaveEdit(t)}
-                    className={cn(
-                      'rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground',
-                      savingEdit && 'opacity-60',
-                    )}
-                  >
+                  <Button size="sm" disabled={savingEdit} onClick={() => handleSaveEdit(t)}>
                     {savingEdit ? 'Enregistrement…' : 'Enregistrer'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditingId(null)}
-                    className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground"
-                  >
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setEditingId(null)}>
                     Annuler
-                  </button>
+                  </Button>
                 </div>
               )}
             </li>
