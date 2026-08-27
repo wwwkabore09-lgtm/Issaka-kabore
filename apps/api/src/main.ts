@@ -9,7 +9,10 @@ async function bootstrap() {
   // une version reparsée/reformatée par Express.
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
-  app.enableCors();
+  // CORS_ORIGIN vide = toutes origines autorisées (développement) ; en production, restreindre
+  // à l'URL réelle du frontend déployé (liste séparée par des virgules pour plusieurs domaines).
+  const corsOrigin = process.env.CORS_ORIGIN?.trim();
+  app.enableCors({ origin: corsOrigin ? corsOrigin.split(',').map((o) => o.trim()) : true });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

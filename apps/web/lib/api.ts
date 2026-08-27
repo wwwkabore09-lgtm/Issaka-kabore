@@ -178,8 +178,8 @@ export function getSavingsOverview(accessToken: string) {
   return apiFetch<SavingsOverviewDto>('/goals/savings-overview', { headers: authHeaders(accessToken) });
 }
 
-export function listCategories(userId: string) {
-  return apiFetch<CategoryDto[]>(`/categories?userId=${encodeURIComponent(userId)}`);
+export function listCategories(accessToken: string) {
+  return apiFetch<CategoryDto[]>('/categories', { headers: authHeaders(accessToken) });
 }
 
 export function listTransactions(accountId: string, accessToken: string) {

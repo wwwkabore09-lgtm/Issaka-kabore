@@ -1,13 +1,15 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, UseGuards } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
-import { ListCategoriesQueryDto } from './dto/list-categories-query.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
 
 @Controller('categories')
+@UseGuards(JwtAuthGuard)
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Get()
-  findAll(@Query() query: ListCategoriesQueryDto) {
-    return this.categoriesService.findAllForUser(query.userId);
+  findAll(@CurrentUser() userId: string) {
+    return this.categoriesService.findAllForUser(userId);
   }
 }

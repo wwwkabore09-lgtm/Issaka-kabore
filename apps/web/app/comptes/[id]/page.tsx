@@ -123,7 +123,7 @@ export default function CompteDetailPage() {
       const [accountRes, accountsRes, categoriesRes, transactionsRes, summaryRes, budgetsRes] = await Promise.all([
         getAccount(accountId, accessToken),
         listAccounts(accessToken),
-        listCategories(userId),
+        listCategories(accessToken),
         listTransactions(accountId, accessToken),
         getTransactionSummary(accountId, accessToken, startOfMonthIso(), endOfMonthIso()),
         listBudgets(accountId, accessToken),

@@ -99,7 +99,7 @@ export default function TransactionsPage() {
   async function loadStaticData() {
     if (!accessToken) return;
     try {
-      const [accountsRes, categoriesRes] = await Promise.all([listAccounts(accessToken), listCategories(userId)]);
+      const [accountsRes, categoriesRes] = await Promise.all([listAccounts(accessToken), listCategories(accessToken)]);
       setAccounts(accountsRes);
       setCategories(categoriesRes);
       if (accountsRes.length > 0) setFormAccountId(accountsRes[0].id);

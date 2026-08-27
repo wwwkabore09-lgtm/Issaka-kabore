@@ -34,9 +34,6 @@ export class AuthController {
     await this.authService.logout(dto.refreshToken);
   }
 
-  // Démontre le guard/décorateur de bout en bout : GET /auth/me exige un access token
-  // valide et retourne l'utilisateur qu'il désigne — le modèle que les autres domaines
-  // suivront quand ils migreront du userId manuel vers l'authentification réelle.
   @Get('me')
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser() userId: string) {
