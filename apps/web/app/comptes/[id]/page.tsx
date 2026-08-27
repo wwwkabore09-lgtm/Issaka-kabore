@@ -25,10 +25,13 @@ import {
   listCategories,
   listTransactions,
   updateAccount,
+  updateBudget,
 } from '@/lib/api';
 import { REVENUE_CATEGORY_LABELS, REVENUE_FREQUENCY_LABELS } from '@/lib/account-labels';
 import { getStoredAccessToken, getStoredUserId } from '@/lib/auth-session';
 import { AppNav } from '@/components/app-nav';
+import { useToast } from '@/components/toast';
+import { useConfirm } from '@/components/confirm-dialog';
 
 const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   income: 'Revenu',
@@ -54,6 +57,8 @@ function endOfMonthIso() {
 export default function CompteDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const toast = useToast();
+  const confirm = useConfirm();
   const accountId = params.id;
 
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -77,6 +82,10 @@ export default function CompteDetailPage() {
   const [budgetCategoryId, setBudgetCategoryId] = useState('');
   const [budgetAmount, setBudgetAmount] = useState('');
   const [submittingBudget, setSubmittingBudget] = useState(false);
+
+  const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
+  const [editBudgetAmount, setEditBudgetAmount] = useState('');
+  const [savingBudgetEdit, setSavingBudgetEdit] = useState(false);
 
   useEffect(() => {
     const storedToken = getStoredAccessToken();
@@ -141,22 +150,57 @@ export default function CompteDetailPage() {
       await createBudget(accessToken, { accountId, categoryId: budgetCategoryId, amount: budgetAmount });
       setBudgetCategoryId('');
       setBudgetAmount('');
+      toast.success('Budget défini.');
       await refreshAll();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      const message = err instanceof Error ? err.message : 'Erreur inconnue';
+      setError(message);
+      toast.error(message);
     } finally {
       setSubmittingBudget(false);
     }
   }
 
-  async function handleDeleteBudget(budgetId: string) {
+  function startEditBudget(b: BudgetProgressDto) {
+    setEditingBudgetId(b.budgetId);
+    setEditBudgetAmount(b.limit);
+  }
+
+  async function handleSaveBudgetEdit(budgetId: string) {
     if (!accessToken) return;
+    setSavingBudgetEdit(true);
     setError(null);
     try {
-      await deleteBudget(budgetId, accessToken);
+      await updateBudget(budgetId, accessToken, { amount: editBudgetAmount });
+      setEditingBudgetId(null);
+      toast.success('Budget modifié.');
       await refreshAll();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      const message = err instanceof Error ? err.message : 'Erreur inconnue';
+      setError(message);
+      toast.error(message);
+    } finally {
+      setSavingBudgetEdit(false);
+    }
+  }
+
+  async function handleDeleteBudget(budget: BudgetProgressDto) {
+    if (!accessToken) return;
+    const ok = await confirm({
+      title: `Supprimer le budget « ${budget.categoryLabel} » ?`,
+      confirmLabel: 'Supprimer',
+      danger: true,
+    });
+    if (!ok) return;
+    setError(null);
+    try {
+      await deleteBudget(budget.budgetId, accessToken);
+      toast.success('Budget supprimé.');
+      await refreshAll();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erreur inconnue';
+      setError(message);
+      toast.error(message);
     }
   }
 
@@ -167,7 +211,9 @@ export default function CompteDetailPage() {
       await updateAccount(accountId, accessToken, { isSharedWithFamily: !account.isSharedWithFamily });
       await refreshAll();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      const message = err instanceof Error ? err.message : 'Erreur inconnue';
+      setError(message);
+      toast.error(message);
     }
   }
 
@@ -189,9 +235,12 @@ export default function CompteDetailPage() {
       setDescription('');
       setCategoryId('');
       setTransferToAccountId('');
+      toast.success(type === 'income' ? 'Revenu ajouté.' : type === 'expense' ? 'Dépense ajoutée.' : 'Transfert ajouté.');
       await refreshAll();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      const message = err instanceof Error ? err.message : 'Erreur inconnue';
+      setError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -262,32 +311,80 @@ export default function CompteDetailPage() {
         <ul className="flex flex-col gap-2">
           {budgets.map((b) => {
             const overBudget = b.percentage > 100;
+            const isEditing = editingBudgetId === b.budgetId;
             return (
               <li key={b.budgetId} className="rounded-lg border border-border p-3">
                 <div className="flex items-center justify-between">
                   <p className="font-medium">{b.categoryLabel}</p>
-                  <div className="flex items-center gap-2">
-                    <span className={cn('text-sm', overBudget && 'text-destructive')}>
-                      {account ? formatAmount(b.spent, account.currency) : b.spent} /{' '}
-                      {account ? formatAmount(b.limit, account.currency) : b.limit}
-                    </span>
+                  {!isEditing && (
+                    <div className="flex items-center gap-2">
+                      <span className={cn('text-sm', overBudget && 'text-destructive')}>
+                        {account ? formatAmount(b.spent, account.currency) : b.spent} /{' '}
+                        {account ? formatAmount(b.limit, account.currency) : b.limit}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => startEditBudget(b)}
+                        className="text-xs text-muted-foreground underline"
+                      >
+                        Modifier
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBudget(b)}
+                        className="text-xs text-destructive underline"
+                      >
+                        Supprimer
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {isEditing ? (
+                  <div className="mt-2 flex items-center gap-2">
+                    <label htmlFor={`edit-budget-${b.budgetId}`} className="sr-only">
+                      Montant mensuel
+                    </label>
+                    <input
+                      id={`edit-budget-${b.budgetId}`}
+                      value={editBudgetAmount}
+                      onChange={(event) => setEditBudgetAmount(event.target.value)}
+                      inputMode="decimal"
+                      className="w-32 rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+                    />
                     <button
                       type="button"
-                      onClick={() => handleDeleteBudget(b.budgetId)}
-                      className="text-xs text-muted-foreground underline"
+                      disabled={savingBudgetEdit}
+                      onClick={() => handleSaveBudgetEdit(b.budgetId)}
+                      className={cn(
+                        'rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground',
+                        savingBudgetEdit && 'opacity-60',
+                      )}
                     >
-                      Supprimer
+                      {savingBudgetEdit ? 'Enregistrement…' : 'Enregistrer'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingBudgetId(null)}
+                      className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground"
+                    >
+                      Annuler
                     </button>
                   </div>
-                </div>
-                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className={cn('h-full rounded-full', overBudget ? 'bg-destructive' : 'bg-primary')}
-                    style={{ width: `${Math.min(b.percentage, 100)}%` }}
-                  />
-                </div>
-                {overBudget && (
-                  <p className="mt-1 text-xs text-destructive">Budget dépassé de {account ? formatAmount(String(Number(b.spent) - Number(b.limit)), account.currency) : ''}</p>
+                ) : (
+                  <>
+                    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={cn('h-full rounded-full', overBudget ? 'bg-destructive' : 'bg-primary')}
+                        style={{ width: `${Math.min(b.percentage, 100)}%` }}
+                      />
+                    </div>
+                    {overBudget && (
+                      <p className="mt-1 text-xs text-destructive">
+                        Budget dépassé de{' '}
+                        {account ? formatAmount(String(Number(b.spent) - Number(b.limit)), account.currency) : ''}
+                      </p>
+                    )}
+                  </>
                 )}
               </li>
             );
@@ -419,7 +516,12 @@ export default function CompteDetailPage() {
       </form>
 
       <div className="flex flex-col gap-2">
-        <h2 className="font-medium">Transactions {loading && '(chargement…)'}</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-medium">Transactions {loading && '(chargement…)'}</h2>
+          <Link href="/transactions" className="text-xs text-muted-foreground underline">
+            Voir, modifier ou filtrer toutes vos transactions →
+          </Link>
+        </div>
 
         {!loading && transactions.length === 0 && (
           <p className="text-sm text-muted-foreground">Aucune transaction pour ce compte.</p>

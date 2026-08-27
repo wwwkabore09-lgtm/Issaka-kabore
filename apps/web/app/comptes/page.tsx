@@ -26,6 +26,8 @@ import {
 import { REVENUE_CATEGORY_LABELS, REVENUE_FREQUENCY_LABELS } from '@/lib/account-labels';
 import { clearSession, getStoredAccessToken, getStoredRefreshToken, getStoredUserEmail } from '@/lib/auth-session';
 import { AppNav } from '@/components/app-nav';
+import { useToast } from '@/components/toast';
+import { useConfirm } from '@/components/confirm-dialog';
 
 const DEFAULT_CURRENCY = COUNTRIES[LAUNCH_COUNTRY].currency;
 
@@ -42,6 +44,8 @@ function formatEvolution(value: string | null) {
 
 export default function ComptesPage() {
   const router = useRouter();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
@@ -127,6 +131,7 @@ export default function ComptesPage() {
     try {
       if (editingId) {
         await updateAccount(editingId, accessToken, { name, category, frequency });
+        toast.success('Revenu modifié.');
       } else {
         await createAccount(accessToken, {
           name,
@@ -136,11 +141,14 @@ export default function ComptesPage() {
           currency: DEFAULT_CURRENCY,
           openingBalance: amount || undefined,
         });
+        toast.success('Revenu ajouté.');
       }
       resetForm();
       await refreshAll(accessToken);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      const message = err instanceof Error ? err.message : 'Erreur inconnue';
+      setError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -153,18 +161,30 @@ export default function ComptesPage() {
       await updateAccount(account.id, accessToken, { isActive: !account.isActive });
       await refreshAll(accessToken);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      const message = err instanceof Error ? err.message : 'Erreur inconnue';
+      setError(message);
+      toast.error(message);
     }
   }
 
   async function handleDelete(account: AccountDto) {
     if (!accessToken) return;
+    const ok = await confirm({
+      title: `Supprimer « ${account.name} » ?`,
+      description: "Cette action est définitive. Si cette source a déjà un historique, désactivez-la plutôt.",
+      confirmLabel: 'Supprimer',
+      danger: true,
+    });
+    if (!ok) return;
     setError(null);
     try {
       await deleteAccount(account.id, accessToken);
+      toast.success('Revenu supprimé.');
       await refreshAll(accessToken);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      const message = err instanceof Error ? err.message : 'Erreur inconnue';
+      setError(message);
+      toast.error(message);
     }
   }
 
@@ -327,8 +347,20 @@ export default function ComptesPage() {
           </form>
         )}
 
-        {!loading && accounts.length === 0 && (
-          <p className="text-sm text-muted-foreground">Aucun revenu pour le moment.</p>
+        {!loading && accounts.length === 0 && !showForm && (
+          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border p-8 text-center">
+            <p className="font-medium">Aucun revenu enregistré</p>
+            <p className="text-sm text-muted-foreground">
+              Ajoutez votre premier revenu pour commencer à suivre vos finances.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="mt-1 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            >
+              Ajouter un revenu
+            </button>
+          </div>
         )}
 
         <ul className="flex flex-col gap-2">

@@ -12,9 +12,12 @@ import {
   listAccounts,
   listDebtPayments,
   listDebts,
+  updateDebt,
 } from '@/lib/api';
 import { getStoredAccessToken } from '@/lib/auth-session';
 import { AppNav } from '@/components/app-nav';
+import { useToast } from '@/components/toast';
+import { useConfirm } from '@/components/confirm-dialog';
 
 const DEBT_DIRECTION_LABELS: Record<DebtDirection, string> = {
   debt: 'Je dois',
@@ -27,6 +30,9 @@ function formatXof(value: string) {
 
 export default function DettesPage() {
   const router = useRouter();
+  const toast = useToast();
+  const confirm = useConfirm();
+
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [debts, setDebts] = useState<DebtProgressDto[]>([]);
   const [accounts, setAccounts] = useState<AccountDto[]>([]);
@@ -44,6 +50,12 @@ export default function DettesPage() {
   const [paymentAmounts, setPaymentAmounts] = useState<Record<string, string>>({});
   const [expandedDebtId, setExpandedDebtId] = useState<string | null>(null);
   const [payments, setPayments] = useState<DebtPaymentDto[]>([]);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editCounterpartyName, setEditCounterpartyName] = useState('');
+  const [editPrincipalAmount, setEditPrincipalAmount] = useState('');
+  const [editDueDate, setEditDueDate] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     const stored = getStoredAccessToken();
@@ -97,11 +109,43 @@ export default function DettesPage() {
       setPrincipalAmount('');
       setDueDate('');
       setAccountId('');
+      toast.success(type === 'debt' ? 'Dette ajoutée.' : 'Créance ajoutée.');
       await refreshAll();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      const message = err instanceof Error ? err.message : 'Erreur inconnue';
+      setError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  function startEdit(d: DebtProgressDto) {
+    setEditingId(d.debtId);
+    setEditCounterpartyName(d.counterpartyName);
+    setEditPrincipalAmount(d.principalAmount);
+    setEditDueDate(d.dueDate ? d.dueDate.slice(0, 10) : '');
+  }
+
+  async function handleSaveEdit(debtId: string) {
+    if (!accessToken) return;
+    setSavingEdit(true);
+    setError(null);
+    try {
+      await updateDebt(debtId, accessToken, {
+        counterpartyName: editCounterpartyName,
+        principalAmount: editPrincipalAmount,
+        dueDate: editDueDate ? new Date(editDueDate).toISOString() : undefined,
+      });
+      setEditingId(null);
+      toast.success('Entrée modifiée.');
+      await refreshAll();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erreur inconnue';
+      setError(message);
+      toast.error(message);
+    } finally {
+      setSavingEdit(false);
     }
   }
 
@@ -113,24 +157,37 @@ export default function DettesPage() {
     try {
       await addDebtPayment(debtId, accessToken, { amount });
       setPaymentAmounts((prev) => ({ ...prev, [debtId]: '' }));
+      toast.success('Paiement enregistré.');
       await refreshAll();
       if (expandedDebtId === debtId) {
         setPayments(await listDebtPayments(debtId, accessToken));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      const message = err instanceof Error ? err.message : 'Erreur inconnue';
+      setError(message);
+      toast.error(message);
     }
   }
 
-  async function handleDelete(debtId: string) {
+  async function handleDelete(debt: DebtProgressDto) {
     if (!accessToken) return;
+    const ok = await confirm({
+      title: `Supprimer « ${debt.counterpartyName} » ?`,
+      description: 'Tous les paiements associés seront définitivement supprimés.',
+      confirmLabel: 'Supprimer',
+      danger: true,
+    });
+    if (!ok) return;
     setError(null);
     try {
-      await deleteDebt(debtId, accessToken);
-      if (expandedDebtId === debtId) setExpandedDebtId(null);
+      await deleteDebt(debt.debtId, accessToken);
+      if (expandedDebtId === debt.debtId) setExpandedDebtId(null);
+      toast.success('Entrée supprimée.');
       await refreshAll();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      const message = err instanceof Error ? err.message : 'Erreur inconnue';
+      setError(message);
+      toast.error(message);
     }
   }
 
@@ -173,61 +230,80 @@ export default function DettesPage() {
       <form onSubmit={handleCreate} className="flex flex-col gap-3 rounded-lg border border-border p-4">
         <h2 className="font-medium">Nouvelle entrée</h2>
 
-          <div className="flex items-center gap-4 text-sm">
-            {DEBT_DIRECTIONS.map((value) => (
-              <label key={value} className="flex items-center gap-1.5">
-                <input type="radio" name="type" checked={type === value} onChange={() => setType(value)} />
-                {DEBT_DIRECTION_LABELS[value]}
-              </label>
-            ))}
-          </div>
+        <div className="flex items-center gap-4 text-sm">
+          {DEBT_DIRECTIONS.map((value) => (
+            <label key={value} className="flex items-center gap-1.5">
+              <input type="radio" name="type" checked={type === value} onChange={() => setType(value)} />
+              {DEBT_DIRECTION_LABELS[value]}
+            </label>
+          ))}
+        </div>
 
-          <input
-            value={counterpartyName}
-            onChange={(event) => setCounterpartyName(event.target.value)}
-            placeholder="Nom (ex: Boubacar)"
-            required
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-          />
+        <label htmlFor="debt-name" className="sr-only">
+          Nom
+        </label>
+        <input
+          id="debt-name"
+          value={counterpartyName}
+          onChange={(event) => setCounterpartyName(event.target.value)}
+          placeholder="Nom (ex: Boubacar)"
+          required
+          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+        />
 
-          <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="debt-amount" className="text-xs text-muted-foreground">
+              Montant
+            </label>
             <input
+              id="debt-amount"
               value={principalAmount}
               onChange={(event) => setPrincipalAmount(event.target.value)}
-              placeholder="Montant"
               inputMode="decimal"
               required
               className="rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="debt-due-date" className="text-xs text-muted-foreground">
+              Échéance (optionnel)
+            </label>
             <input
+              id="debt-due-date"
               type="date"
               value={dueDate}
               onChange={(event) => setDueDate(event.target.value)}
               className="rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
           </div>
+        </div>
 
-          <select
-            value={accountId}
-            onChange={(event) => setAccountId(event.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-          >
-            <option value="">Aucun compte lié</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
+        <label htmlFor="debt-account" className="sr-only">
+          Compte lié
+        </label>
+        <select
+          id="debt-account"
+          value={accountId}
+          onChange={(event) => setAccountId(event.target.value)}
+          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+        >
+          <option value="">Aucun compte lié</option>
+          {accounts.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
+          ))}
+        </select>
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className={cn(
-              'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
-              submitting && 'opacity-60',
-            )}
-          >
+        <button
+          type="submit"
+          disabled={submitting}
+          className={cn(
+            'rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity',
+            submitting && 'opacity-60',
+          )}
+        >
           {submitting ? 'Création…' : 'Ajouter'}
         </button>
       </form>
@@ -253,78 +329,159 @@ export default function DettesPage() {
         </div>
 
         {!loading && visibleDebts.length === 0 && (
-          <p className="text-sm text-muted-foreground">Aucune entrée.</p>
+          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border p-8 text-center">
+            <p className="font-medium">Aucune dette ni créance enregistrée</p>
+            <p className="text-sm text-muted-foreground">Ajoutez votre première entrée pour la suivre ici.</p>
+          </div>
         )}
 
         <ul className="flex flex-col gap-3">
-          {visibleDebts.map((d) => (
-            <li key={d.debtId} className="rounded-lg border border-border p-4">
-              <div className="flex items-center justify-between">
-                <p className="font-medium">
-                  {d.counterpartyName}{' '}
-                  <span className="text-xs font-normal text-muted-foreground">
-                    ({DEBT_DIRECTION_LABELS[d.type]})
-                  </span>{' '}
-                  {d.isSettled && <span className="text-primary">✓ Soldé</span>}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(d.debtId)}
-                  className="text-xs text-muted-foreground underline"
-                >
-                  Supprimer
-                </button>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {formatXof(d.paidAmount)} / {formatXof(d.principalAmount)}
-                {d.dueDate ? ` · échéance ${new Date(d.dueDate).toLocaleDateString('fr-FR')}` : ''}
-              </p>
-              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className={cn('h-full rounded-full', d.isSettled ? 'bg-primary' : 'bg-primary/70')}
-                  style={{ width: `${Math.min(d.percentage, 100)}%` }}
-                />
-              </div>
+          {visibleDebts.map((d) => {
+            const isEditing = editingId === d.debtId;
+            return (
+              <li key={d.debtId} className="rounded-lg border border-border p-4">
+                {isEditing ? (
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor={`edit-debt-name-${d.debtId}`} className="text-xs text-muted-foreground">
+                      Nom
+                    </label>
+                    <input
+                      id={`edit-debt-name-${d.debtId}`}
+                      value={editCounterpartyName}
+                      onChange={(event) => setEditCounterpartyName(event.target.value)}
+                      className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex flex-col gap-1">
+                        <label htmlFor={`edit-debt-amount-${d.debtId}`} className="text-xs text-muted-foreground">
+                          Montant
+                        </label>
+                        <input
+                          id={`edit-debt-amount-${d.debtId}`}
+                          value={editPrincipalAmount}
+                          onChange={(event) => setEditPrincipalAmount(event.target.value)}
+                          inputMode="decimal"
+                          className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label htmlFor={`edit-debt-date-${d.debtId}`} className="text-xs text-muted-foreground">
+                          Échéance
+                        </label>
+                        <input
+                          id={`edit-debt-date-${d.debtId}`}
+                          type="date"
+                          value={editDueDate}
+                          onChange={(event) => setEditDueDate(event.target.value)}
+                          className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        disabled={savingEdit}
+                        onClick={() => handleSaveEdit(d.debtId)}
+                        className={cn(
+                          'rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground',
+                          savingEdit && 'opacity-60',
+                        )}
+                      >
+                        {savingEdit ? 'Enregistrement…' : 'Enregistrer'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(null)}
+                        className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium">
+                        {d.counterpartyName}{' '}
+                        <span className="text-xs font-normal text-muted-foreground">
+                          ({DEBT_DIRECTION_LABELS[d.type]})
+                        </span>{' '}
+                        {d.isSettled && <span className="text-primary">✓ Soldé</span>}
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => startEdit(d)}
+                          className="text-xs text-muted-foreground underline"
+                        >
+                          Modifier
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(d)}
+                          className="text-xs text-destructive underline"
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {formatXof(d.paidAmount)} / {formatXof(d.principalAmount)}
+                      {d.dueDate ? ` · échéance ${new Date(d.dueDate).toLocaleDateString('fr-FR')}` : ''}
+                    </p>
+                    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={cn('h-full rounded-full', d.isSettled ? 'bg-primary' : 'bg-primary/70')}
+                        style={{ width: `${Math.min(d.percentage, 100)}%` }}
+                      />
+                    </div>
 
-              <div className="mt-3 flex items-center gap-2">
-                <input
-                  value={paymentAmounts[d.debtId] ?? ''}
-                  onChange={(event) => setPaymentAmounts((prev) => ({ ...prev, [d.debtId]: event.target.value }))}
-                  placeholder={d.type === 'debt' ? 'Enregistrer un remboursement' : 'Enregistrer un versement reçu'}
-                  inputMode="decimal"
-                  className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => handlePay(d.debtId)}
-                  className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
-                >
-                  Ajouter
-                </button>
-                <button
-                  type="button"
-                  onClick={() => toggleHistory(d.debtId)}
-                  className="text-xs text-muted-foreground underline"
-                >
-                  {expandedDebtId === d.debtId ? 'Masquer' : 'Historique'}
-                </button>
-              </div>
+                    <div className="mt-3 flex items-center gap-2">
+                      <label htmlFor={`payment-${d.debtId}`} className="sr-only">
+                        {d.type === 'debt' ? 'Enregistrer un remboursement' : 'Enregistrer un versement reçu'}
+                      </label>
+                      <input
+                        id={`payment-${d.debtId}`}
+                        value={paymentAmounts[d.debtId] ?? ''}
+                        onChange={(event) => setPaymentAmounts((prev) => ({ ...prev, [d.debtId]: event.target.value }))}
+                        placeholder={d.type === 'debt' ? 'Enregistrer un remboursement' : 'Enregistrer un versement reçu'}
+                        inputMode="decimal"
+                        className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handlePay(d.debtId)}
+                        className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
+                      >
+                        Ajouter
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleHistory(d.debtId)}
+                        className="text-xs text-muted-foreground underline"
+                      >
+                        {expandedDebtId === d.debtId ? 'Masquer' : 'Historique'}
+                      </button>
+                    </div>
 
-              {expandedDebtId === d.debtId && (
-                <ul className="mt-3 flex flex-col gap-1 border-t border-border pt-3">
-                  {payments.length === 0 && <li className="text-xs text-muted-foreground">Aucun paiement.</li>}
-                  {payments.map((p) => (
-                    <li key={p.id} className="flex justify-between text-xs">
-                      <span className="text-muted-foreground">
-                        {new Date(p.paidAt).toLocaleDateString('fr-FR')} {p.note ? `· ${p.note}` : ''}
-                      </span>
-                      <span>{formatXof(p.amount)}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          ))}
+                    {expandedDebtId === d.debtId && (
+                      <ul className="mt-3 flex flex-col gap-1 border-t border-border pt-3">
+                        {payments.length === 0 && <li className="text-xs text-muted-foreground">Aucun paiement.</li>}
+                        {payments.map((p) => (
+                          <li key={p.id} className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">
+                              {new Date(p.paidAt).toLocaleDateString('fr-FR')} {p.note ? `· ${p.note}` : ''}
+                            </span>
+                            <span>{formatXof(p.amount)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </div>
     </main>

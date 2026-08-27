@@ -14,6 +14,8 @@ import {
 } from '@/lib/api';
 import { getStoredAccessToken, getStoredUserId } from '@/lib/auth-session';
 import { AppNav } from '@/components/app-nav';
+import { useToast } from '@/components/toast';
+import { useConfirm } from '@/components/confirm-dialog';
 
 function formatXof(value: string) {
   return `${Number(value).toLocaleString('fr-FR')} FCFA`;
@@ -21,6 +23,8 @@ function formatXof(value: string) {
 
 export default function FamillePage() {
   const router = useRouter();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [userId, setUserId] = useState('');
   const [family, setFamily] = useState<FamilyDto | null>(null);
@@ -72,9 +76,12 @@ export default function FamillePage() {
     try {
       await createFamily(accessToken, { name: familyName });
       setFamilyName('');
+      toast.success('Famille créée.');
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      const message = err instanceof Error ? err.message : 'Erreur inconnue';
+      setError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -88,33 +95,55 @@ export default function FamillePage() {
     try {
       await addFamilyMember(family.id, accessToken, { memberUserId });
       setMemberUserId('');
+      toast.success('Membre ajouté.');
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      const message = err instanceof Error ? err.message : 'Erreur inconnue';
+      setError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
   }
 
-  async function handleRemoveMember(targetUserId: string) {
+  async function handleRemoveMember(targetUserId: string, isSelf: boolean) {
     if (!family || !accessToken) return;
+    const ok = await confirm({
+      title: isSelf ? 'Quitter cette famille ?' : 'Retirer ce membre ?',
+      danger: true,
+      confirmLabel: isSelf ? 'Quitter' : 'Retirer',
+    });
+    if (!ok) return;
     setError(null);
     try {
       await removeFamilyMember(family.id, targetUserId, accessToken);
+      toast.success(isSelf ? 'Vous avez quitté la famille.' : 'Membre retiré.');
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      const message = err instanceof Error ? err.message : 'Erreur inconnue';
+      setError(message);
+      toast.error(message);
     }
   }
 
   async function handleDeleteFamily() {
     if (!family || !accessToken) return;
+    const ok = await confirm({
+      title: `Supprimer « ${family.name} » ?`,
+      description: 'Tous les membres perdront leur accès. Cette action est définitive.',
+      confirmLabel: 'Supprimer',
+      danger: true,
+    });
+    if (!ok) return;
     setError(null);
     try {
       await deleteFamily(family.id, accessToken);
+      toast.success('Famille supprimée.');
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      const message = err instanceof Error ? err.message : 'Erreur inconnue';
+      setError(message);
+      toast.error(message);
     }
   }
 
@@ -192,8 +221,8 @@ export default function FamillePage() {
                     m.role !== 'owner' && (
                       <button
                         type="button"
-                        onClick={() => handleRemoveMember(m.userId)}
-                        className="text-xs text-muted-foreground underline"
+                        onClick={() => handleRemoveMember(m.userId, m.userId === userId)}
+                        className="text-xs text-destructive underline"
                       >
                         {m.userId === userId ? 'Quitter' : 'Retirer'}
                       </button>
