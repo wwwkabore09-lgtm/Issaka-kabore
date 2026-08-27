@@ -1,4 +1,4 @@
-import type { RevenueCategory, RevenueFrequency } from '@finza/shared-types';
+import type { FinancialSituation, RevenueCategory, RevenueFrequency } from '@finza/shared-types';
 
 export const REVENUE_CATEGORY_LABELS: Record<RevenueCategory, string> = {
   salaire: 'Salaire',
@@ -17,4 +17,11 @@ export const REVENUE_FREQUENCY_LABELS: Record<RevenueFrequency, string> = {
   quarterly: 'Trimestriel',
   yearly: 'Annuel',
   variable: 'Variable',
+};
+
+export const FINANCIAL_SITUATION_LABELS: Record<FinancialSituation, string> = {
+  stable: 'Stable',
+  tendue: 'Tendue',
+  variable: 'Variable',
+  en_amelioration: 'En amélioration',
 };

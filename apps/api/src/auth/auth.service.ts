@@ -1,12 +1,14 @@
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
-import type { AuthResponseDto, AuthTokensDto, AuthUserDto } from '@finza/shared-types';
+import type { AuthResponseDto, AuthTokensDto, AuthUserDto, FinancialSituation, RevenueFrequency } from '@finza/shared-types';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 const BCRYPT_ROUNDS = 10;
 const REFRESH_TOKEN_BYTES = 40;
@@ -95,6 +97,22 @@ export class AuthService {
     return this.toUserDto(user);
   }
 
+  // Chaque champ omis reste inchangé ; envoyer explicitement `null` efface un champ déjà
+  // renseigné (ex: revenir sur un pays choisi par erreur) — même convention que les dates
+  // d'échéance ailleurs dans l'API.
+  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<AuthUserDto> {
+    const data: Prisma.UserUpdateInput = {};
+
+    if (dto.country !== undefined) data.country = dto.country;
+    if (dto.preferredLanguage !== undefined) data.preferredLanguage = dto.preferredLanguage;
+    if (dto.mainFinancialGoal !== undefined) data.mainFinancialGoal = dto.mainFinancialGoal;
+    if (dto.incomeFrequency !== undefined) data.incomeFrequency = dto.incomeFrequency;
+    if (dto.financialSituation !== undefined) data.financialSituation = dto.financialSituation;
+
+    const user = await this.prisma.user.update({ where: { id: userId }, data });
+    return this.toUserDto(user);
+  }
+
   private async issueTokens(userId: string): Promise<AuthTokensDto> {
     const accessToken = await this.jwtService.signAsync(
       { sub: userId },
@@ -118,7 +136,25 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  private toUserDto(user: { id: string; email: string; fullName: string }): AuthUserDto {
-    return { id: user.id, email: user.email, fullName: user.fullName };
+  private toUserDto(user: {
+    id: string;
+    email: string;
+    fullName: string;
+    country: string | null;
+    preferredLanguage: string;
+    mainFinancialGoal: string | null;
+    incomeFrequency: RevenueFrequency | null;
+    financialSituation: FinancialSituation | null;
+  }): AuthUserDto {
+    return {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      country: user.country,
+      preferredLanguage: user.preferredLanguage,
+      mainFinancialGoal: user.mainFinancialGoal,
+      incomeFrequency: user.incomeFrequency,
+      financialSituation: user.financialSituation,
+    };
   }
 }

@@ -26,4 +26,8 @@ export const DEFAULT_CATEGORIES: Record<CountryCode, DefaultCategory[]> = {
   CI: [],
   SN: [],
   ML: [],
+  TG: [],
+  BJ: [],
+  FR: [],
+  CA: [],
 };

@@ -13,6 +13,8 @@ const NAV_ITEMS = [
   { href: '/abonnements', label: 'Abonnements' },
   { href: '/rapports', label: 'Rapports' },
   { href: '/famille', label: 'Famille' },
+  { href: '/assistant', label: 'Assistant IA' },
+  { href: '/profil', label: 'Profil' },
 ] as const;
 
 // Barre de navigation partagée entre toutes les pages authentifiées : toujours visible

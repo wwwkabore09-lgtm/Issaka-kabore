@@ -1,8 +1,9 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser } from './current-user.decorator';
 
@@ -40,5 +41,13 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser() userId: string) {
     return this.authService.getMe(userId);
+  }
+
+  // Profil utilisé par l'assistant IA (pays, langue, objectif, fréquence de revenus,
+  // situation financière) — jamais requis, toujours modifiable après coup.
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  updateProfile(@CurrentUser() userId: string, @Body() dto: UpdateProfileDto) {
+    return this.authService.updateProfile(userId, dto);
   }
 }

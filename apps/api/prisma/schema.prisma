@@ -23,6 +23,21 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // Profil utilisé pour personnaliser l'assistant IA (voir module `ai`) : jamais requis à
+  // l'inscription, chaque champ reste null tant que l'utilisateur ne l'a pas renseigné dans
+  // son profil, et l'assistant doit le dire clairement plutôt que d'inventer une valeur.
+  //
+  // `country` n'est pas un enum Prisma délibérément : la liste des pays vit dans
+  // @finza/config (COUNTRIES) pour pouvoir en ajouter sans migration ; la valeur est
+  // validée contre cette liste au niveau du DTO, pas de la base.
+  country             String?
+  preferredLanguage   String              @default("fr")
+  // Objectif principal tel que formulé par l'utilisateur (ex: "Épargner pour un terrain") —
+  // texte libre plutôt qu'un enum, pour éviter de forcer une réponse générique.
+  mainFinancialGoal   String?
+  incomeFrequency     RevenueFrequency?
+  financialSituation  FinancialSituation?
+
   accounts      Account[]
   categories    Category[]
   goals         Goal[]
@@ -62,6 +77,16 @@ enum RevenueFrequency {
   quarterly
   yearly
   variable
+}
+
+// Auto-évaluation par l'utilisateur de sa situation financière générale — jamais déduite
+// automatiquement des chiffres, uniquement ce qu'il déclare dans son profil. Sert de contexte
+// qualitatif à l'assistant IA pour adapter son ton, pas de fait calculé.
+enum FinancialSituation {
+  stable
+  tendue
+  variable
+  en_amelioration
 }
 
 // Un compte professionnel reste un compte comme un autre : c'est cette valeur qui le

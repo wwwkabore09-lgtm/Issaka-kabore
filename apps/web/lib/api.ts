@@ -1,6 +1,8 @@
 import type {
   AccountBalanceResponse,
   AccountDto,
+  AdviceResponseDto,
+  AskAdviceRequest,
   BudgetDto,
   BudgetProgressDto,
   CategoryDto,
@@ -40,6 +42,7 @@ import type {
   UpdateGoalRequest,
   UpdateSubscriptionRequest,
   UpdateTransactionRequest,
+  UpdateProfileRequest,
 } from '@finza/shared-types';
 import { clearSession, getStoredRefreshToken, updateTokens } from './auth-session';
 
@@ -428,4 +431,24 @@ export function logout(refreshToken: string) {
 
 export function getMe(accessToken: string) {
   return apiFetch<AuthUserDto>('/auth/me', { headers: { Authorization: `Bearer ${accessToken}` } });
+}
+
+export function updateProfile(accessToken: string, payload: UpdateProfileRequest) {
+  return apiFetch<AuthUserDto>('/auth/me', {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+    headers: authHeaders(accessToken),
+  });
+}
+
+export function askAiAdvice(accessToken: string, payload: AskAdviceRequest) {
+  return apiFetch<AdviceResponseDto>('/ai/advice', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    headers: authHeaders(accessToken),
+  });
+}
+
+export function getAiSummary(accessToken: string) {
+  return apiFetch<AdviceResponseDto>('/ai/summary', { headers: authHeaders(accessToken) });
 }

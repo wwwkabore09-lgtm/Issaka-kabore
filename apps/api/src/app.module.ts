@@ -13,6 +13,7 @@ import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { ReportsModule } from './reports/reports.module';
 import { FamiliesModule } from './families/families.module';
 import { AuthModule } from './auth/auth.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { AuthModule } from './auth/auth.module';
     SubscriptionsModule,
     ReportsModule,
     FamiliesModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
